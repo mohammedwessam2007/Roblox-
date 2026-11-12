@@ -6,7 +6,7 @@ permissions: {}
 jobs:
   probe:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 180
     steps:
       - name: Test local-only browser desktop components
         shell: pwsh
@@ -53,6 +53,22 @@ jobs:
           $recv = $ws.ReceiveAsync($segment,[Threading.CancellationToken]::None).GetAwaiter().GetResult()
           Write-Host ("WebSocketRFB=" + [Text.Encoding]::ASCII.GetString($buf,0,$recv.Count).Trim())
           $ws.Dispose()
+          $src = Join-Path $env:RUNNER_TEMP 'steal-reality-source'
+          git clone --quiet --no-checkout https://github.com/mohammedwessam2007/Roblox-.git $src
+          if ($LASTEXITCODE -ne 0) { throw 'Repository clone failed' }
+          git -C $src checkout --quiet --detach d71c8146cb97d7a09c5616f4bd888e278ba6cc0e
+          if ($LASTEXITCODE -ne 0) { throw 'Source checkout failed' }
+          $rojoZip = Join-Path $env:RUNNER_TEMP 'rojo.zip'
+          Invoke-WebRequest -Uri 'https://github.com/rojo-rbx/rojo/releases/download/v7.6.1/rojo-7.6.1-windows-x86_64.zip' -OutFile $rojoZip
+          if ((Get-FileHash $rojoZip -Algorithm SHA256).Hash -ne 'e1c9a78193c609720f3afb38057d3909ed483ecbf5e9e3541313ba0dcbc4f1f8') { throw 'Rojo archive hash mismatch' }
+          Expand-Archive $rojoZip -DestinationPath "$env:RUNNER_TEMP/rojo"
+          $rojo = Get-ChildItem "$env:RUNNER_TEMP/rojo" -Filter rojo.exe -Recurse | Select-Object -First 1
+          if (!$rojo) { throw 'Rojo executable missing' }
+          $place = Join-Path ([Environment]::GetFolderPath('Desktop')) 'StealReality-QA.rbxl'
+          & $rojo.FullName build (Join-Path $src 'default.project.json') -o $place
+          if ($LASTEXITCODE -ne 0 -or !(Test-Path $place)) { throw 'Place build failed' }
+          Write-Host 'GAME_SOURCE=d71c8146cb97d7a09c5616f4bd888e278ba6cc0e'
+          Write-Host ("GAME_SHA256=" + (Get-FileHash $place -Algorithm SHA256).Hash)
           $pub = @'
           -----BEGIN PUBLIC KEY-----
           MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn9MKhPJWXce1ren6DYRg
@@ -111,5 +127,5 @@ jobs:
           if ($sign.Status -ne 'Valid' -or $sign.SignerCertificate.Subject -notmatch 'Roblox') { throw 'Studio signature invalid' }
           Start-Process $installer
           Write-Host 'Studio is starting; tunnel remains private until job ends.'
-          Start-Sleep -Seconds 900
+          Start-Sleep -Seconds 7200
 
