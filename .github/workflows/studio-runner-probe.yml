@@ -56,7 +56,7 @@ jobs:
           $src = Join-Path $env:RUNNER_TEMP 'steal-reality-source'
           git clone --quiet --no-checkout https://github.com/mohammedwessam2007/Roblox-.git $src
           if ($LASTEXITCODE -ne 0) { throw 'Repository clone failed' }
-          git -C $src checkout --quiet --detach d71c8146cb97d7a09c5616f4bd888e278ba6cc0e
+          git -C $src checkout --quiet --detach 4c88ab1920f8111ec9b8da812ad1fe09285854f7
           if ($LASTEXITCODE -ne 0) { throw 'Source checkout failed' }
           $rojoZip = Join-Path $env:RUNNER_TEMP 'rojo.zip'
           Invoke-WebRequest -Uri 'https://github.com/rojo-rbx/rojo/releases/download/v7.6.1/rojo-7.6.1-windows-x86_64.zip' -OutFile $rojoZip
@@ -67,17 +67,17 @@ jobs:
           $place = Join-Path ([Environment]::GetFolderPath('Desktop')) 'StealReality-QA.rbxl'
           & $rojo.FullName build (Join-Path $src 'default.project.json') -o $place
           if ($LASTEXITCODE -ne 0 -or !(Test-Path $place)) { throw 'Place build failed' }
-          Write-Host 'GAME_SOURCE=d71c8146cb97d7a09c5616f4bd888e278ba6cc0e'
+          Write-Host 'GAME_SOURCE=4c88ab1920f8111ec9b8da812ad1fe09285854f7'
           Write-Host ("GAME_SHA256=" + (Get-FileHash $place -Algorithm SHA256).Hash)
           $pub = @'
           -----BEGIN PUBLIC KEY-----
-          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn9MKhPJWXce1ren6DYRg
-          NIcfo25BYct50ubsuRYZGhvR8lQCFVy7G8/oEqROGrM84hRG7jhbpv3ACXdnTizt
-          /uSL62V+lAGEifHhgNTeeGypW2vSzuRKesrFJudnw45QJDKacyStCO/DfBwxrnSD
-          7INOoeaXyPdBL3gTXsDStBvgt4CYJo4o+FjjTwdmDXWdE45FoMlKx9IPht0SgqIv
-          6oIBeQW3qkQj3A6CMwEuqKBk9kWtm78dVm0oBru3ue/YB4PmLyheN8diNX28EFBp
-          HpXPCFMz1oDJM4pnjzcCMC3upWVpuSv2TcW6HI/hItqMS9wGJ9YhKnTpFuYdHYPU
-          NQIDAQAB
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAhsETW5/T6G7EneMo4nx3
+          8fcPg3E3RhEPZmJ7woMIIthzCt1SRSkHeDdzPEJ2/E3v50GZzwkMZGbFiuGUs3U0
+          xRwQi0nv4fByxrI+j0PufyaP9rqpuBGJ2njlQRMtiJr5qaOs01mukJM2aojg0JpS
+          hkHzP09Kuy3e7DM8TsqnIud7wwjkix+PmDvDBzu8OdTQwToufa22CsUrb9h6bLKR
+          N/whmLRriBVg3UrWnjp5cwCQK2ZPOtnlV65CxVnu7YICBuMKL1le9LwFtPV2iilB
+          MJ5ETEY8zV2zAdZ0gimj2/RXtZwZFx/Df8Crp28Cumjadcc8Xaxq/D/vJRxQ2oCA
+          qQIDAQAB
           -----END PUBLIC KEY-----
           '@
           $rsa = [Security.Cryptography.RSA]::Create()
