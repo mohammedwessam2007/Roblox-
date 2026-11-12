@@ -277,6 +277,10 @@ check("phase Live after STEAL", lastSnap.phase == "Live", lastSnap.phase)
 local cluster = hud:FindFirstChild("ActionCluster")
 local throwBtn
 for _, b in cluster:GetChildren() do if b:IsA("TextButton") and string.find(b.Text, "THROW") then throwBtn = b end end
+local fx = workspace:FindFirstChild("SR_LocalFX")
+check("smoothed chicken proxy rendered client-side", fx and fx:FindFirstChild("GoldenChicken_Smooth") ~= nil)
+local srcCap = findDesc(arena, "GravityCapsule")
+check("server chicken hidden locally (proxy shows it)", srcCap and srcCap.LocalTransparencyModifier == 1)
 check("THROW button visible after steal", throwBtn and throwBtn.Visible)
 check("prompt disabled after steal", not prompt.Enabled)
 

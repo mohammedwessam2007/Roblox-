@@ -408,6 +408,96 @@ local function rebuildClouds(origin: Vector3)
 	end
 end
 
+-- ---------------- smoothed visual proxies (presentation only) ----------------
+-- The server moves anchored rule-objects at its tick; replication of those CFrames is stepped.
+-- The client hides the server copies locally and renders local clones that ease toward the
+-- latest server state. Rules, hitboxes and scoring stay 100% on the server copies.
+type Proxy = { source: Model, clone: Model, target: CFrame?, lastPos: Vector3? }
+local proxies: { [Model]: Proxy } = {}
+local function proxyFor(source: Model?): Proxy?
+	if source == nil or source.PrimaryPart == nil then
+		return nil
+	end
+	local p = proxies[source]
+	if p and p.clone.Parent then
+		return p
+	end
+	local ok, cloned = pcall(function(): Model?
+		return source:Clone()
+	end)
+	if not ok or not cloned then
+		return nil
+	end
+	local clone = cloned :: Model
+	for _, d in clone:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.CanCollide = false
+			d.CanQuery = false
+		elseif d:IsA("ProximityPrompt") or d:IsA("WeldConstraint") then
+			d:Destroy()
+		end
+	end
+	for _, d in clone:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = true
+		end
+	end
+	clone.Name = source.Name .. "_Smooth"
+	clone.Parent = fxFolder
+	for _, d in source:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.LocalTransparencyModifier = 1
+		end
+	end
+	local created: Proxy = { source = source, clone = clone, target = nil, lastPos = nil }
+	proxies[source] = created
+	return created
+end
+local function clearProxies()
+	for src, p in proxies do
+		p.clone:Destroy()
+		proxies[src] = nil
+	end
+end
+local function stepProxy(p: Proxy, dt: number, reduced: boolean)
+	local src = p.source
+	if src.Parent == nil then
+		p.clone:Destroy()
+		proxies[src] = nil
+		return
+	end
+	-- mirror per-part visibility the server toggles (capsule, telegraph ring)
+	local srcRoot = src.PrimaryPart :: BasePart
+	local target = srcRoot.CFrame
+	local cur = (p.clone.PrimaryPart :: BasePart).CFrame
+	local alpha = 1 - math.exp(-18 * dt)
+	local nextCf = cur:Lerp(target, alpha)
+	if (target.Position - cur.Position).Magnitude > 40 then
+		nextCf = target -- teleport/reset: snap, never drift across the arena
+	end
+	-- presentation-only lean into motion (disabled under reduced motion)
+	if not reduced and p.lastPos then
+		local v = (nextCf.Position - p.lastPos) / math.max(dt, 1e-3)
+		local lean = math.clamp(v.Magnitude / 80, 0, 0.35)
+		if lean > 0.01 then
+			local axis = Vector3.yAxis:Cross(Vector3.new(v.X, 0, v.Z))
+			if axis.Magnitude > 1e-3 then
+				nextCf = CFrame.fromAxisAngle(axis.Unit, lean) * (nextCf - nextCf.Position) + nextCf.Position
+			end
+		end
+	end
+	p.lastPos = nextCf.Position
+	p.clone:PivotTo(nextCf)
+	for _, d in src:GetDescendants() do
+		if d:IsA("BasePart") then
+			local twin = p.clone:FindFirstChild(d.Name, true)
+			if twin and twin:IsA("BasePart") and twin.Transparency ~= d.Transparency then
+				twin.Transparency = d.Transparency
+			end
+		end
+	end
+end
+
 -- ---------------- state from server ----------------
 local snap: { [string]: any } = {}
 local lastPhase = ""
@@ -577,6 +667,23 @@ stateRemote.OnClientEvent:Connect(function(s: any, events: any)
 		cloudOrigin = o
 		rebuildClouds(o)
 	end
+	if s.mode == "LawSport" then
+		for _, arena in workspace:GetChildren() do
+			if arena:IsA("Model") and string.sub(arena.Name, 1, 6) == "Arena_" then
+				local ch = arena:FindFirstChild("GoldenChicken")
+				local root = if ch and ch:IsA("Model") then ch.PrimaryPart else nil
+				if root and (root.Position - o).Magnitude < Config.ARENA_SPACING / 2 then
+					proxyFor(ch :: Model)
+					local bot = arena:FindFirstChild("RogueLawBot")
+					if bot and bot:IsA("Model") then
+						proxyFor(bot)
+					end
+				end
+			end
+		end
+	elseif next(proxies) ~= nil then
+		clearProxies()
+	end
 	originV = o
 	if type(events) == "table" then
 		for _, e in events do
@@ -601,6 +708,7 @@ end)
 type Aim = { kind: string, startPos: Vector2, cur: Vector2, startedAt: number, device: string }
 local aim: Aim? = nil
 local MAX_ANGLE = math.rad(60)
+local stick2 = Vector2.zero
 
 local function flatForward(): Vector3
 	local f = camera.CFrame.LookVector
@@ -640,6 +748,11 @@ local function aimParams(a: Aim): (Vector3, number, boolean)
 				dir = v.Unit
 			end
 		end
+		return dir, math.clamp(L.throwMinPower + (os.clock() - a.startedAt) / 0.9, L.throwMinPower, 1), false
+	elseif a.device == "gamepad" and stick2.Magnitude > 0.25 then
+		-- right stick steers the aim up to ±60° off camera-forward (no auto-target)
+		local ang = math.clamp(stick2.X, -1, 1) * MAX_ANGLE
+		local dir = CFrame.fromAxisAngle(Vector3.yAxis, -ang) * base
 		return dir, math.clamp(L.throwMinPower + (os.clock() - a.startedAt) / 0.9, L.throwMinPower, 1), false
 	end
 	return base, math.clamp(L.throwMinPower + (os.clock() - a.startedAt) / 0.9, L.throwMinPower, 1), false
@@ -717,6 +830,9 @@ hookTouchButton(throwBtn, "throw")
 hookTouchButton(plantBtn, "plant")
 
 UserInputService.InputChanged:Connect(function(input: InputObject)
+	if input.KeyCode == Enum.KeyCode.Thumbstick2 then
+		stick2 = Vector2.new(input.Position.X, input.Position.Y)
+	end
 	local a = aim
 	if a and a.device == "touch" and input.UserInputType == Enum.UserInputType.Touch then
 		a.cur = Vector2.new(input.Position.X, input.Position.Y)
@@ -796,6 +912,9 @@ RunService.RenderStepped:Connect(function(dt: number)
 		rebuildClouds(cloudOrigin :: Vector3)
 	end
 
+	for _, p in proxies do
+		stepProxy(p, dt, settings.reducedMotion)
+	end
 	local a = aim
 	local root = rootPart()
 	if a and root and snap.phase == "Live" then

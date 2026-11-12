@@ -21,7 +21,7 @@ ReplicatedStorage.Shared -> Folder
   AdaptiveQuality  ModuleScript 3984 bytes
 ServerScriptService.Server -> Script
   WorldBuilder     ModuleScript 17978 bytes
-StarterPlayerScripts.Client -> LocalScript 25643 bytes
+StarterPlayerScripts.Client -> LocalScript 29698 bytes
 PLACE_STRUCTURE_OK
 == G1 headless Luau tests
 == adaptive.spec.luau
@@ -85,6 +85,8 @@ PASS server snapshot reaches client (Ready)
 == T=0-8s: walk to chicken, STEAL via ProximityPrompt
 PASS steal prompt enabled while Ready
 PASS phase Live after STEAL
+PASS smoothed chicken proxy rendered client-side
+PASS server chicken hidden locally (proxy shows it)
 PASS THROW button visible after steal
 PASS prompt disabled after steal
 == T=8-30s: THROW via real client input path (hold F, release) aimed at the Vault
@@ -117,9 +119,9 @@ PASS teleport to exit does not win
 == analytics events logged server-side (names only, no PII)
 PASS goal + steal + replay events logged
 
-EMULATED_RUNTIME: 29 passed, 0 failed, 0 script errors
+EMULATED_RUNTIME: 31 passed, 0 failed, 0 script errors
 == balance sweep
 single-throw shots simulated=2356 scored=51 (2.2%)
 == sha256 of built place
-84266f120585470ec3226ed8fc4510262f8c650f914f21d86a3600b693fb9888  build/StealReality.rbxl
+90da2b8ad36cc8b9918f3a53122a9b9f4e48e8e86112b9b89dc339b74ce6ba35  build/StealReality.rbxl
 OVERALL_STATUS=0

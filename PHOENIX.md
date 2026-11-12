@@ -6,7 +6,7 @@
 **Persistence:** committed and pushed to `mohammedwessam2007/Roblox-` on branch `claude/optimistic-shannon-bkv3f3`. Check `git log` for the SHA.
 
 ## Reached
-`CODE_WRITTEN → LUAU_TYPECHECKED → LUAU_TESTED (40/40) → ROJO_BUILT → G2-EMULATED (29/29, real scripts, not Studio)`. The emulated run found and fixed 4 real defects, 2 of them game-breaking (`docs/negative-results/NR-003`).
+`CODE_WRITTEN → LUAU_TYPECHECKED → LUAU_TESTED (40/40) → ROJO_BUILT → G2-EMULATED (31/31, real scripts, not Studio)`. The emulated run found and fixed 4 real defects, 2 of them game-breaking (`docs/negative-results/NR-003`).
 Evidence: `docs/ACTUAL_TEST_RECEIPTS.md`, `reports/VERIFY_RUN.txt`.
 
 ## Not reached (honest)
@@ -20,8 +20,8 @@ Studio single- and two-client runs, the network simulator, a real Android device
 
 ## Next task
 The owner asked to stay out of the loop, so nothing is pending on them for the work Claude can do. Claude-side backlog, in order:
-1. Client-side smoothing of server-driven parts. Anchored-part replication can look steppy at real network rates.
-2. Gamepad aim using the right stick instead of camera-forward.
+1. DONE: client-side smoothing proxies for the chicken and bot (presentation only; the server copies stay authoritative).
+2. DONE: right-stick gamepad aim, ±60° off camera-forward, with no auto-target.
 3. A podium and cosmetic preview, behind their existing flags and only after replay evidence exists.
 
 ## Gated outside Claude's reach (parked, no action requested)
