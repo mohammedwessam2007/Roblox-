@@ -1,4 +1,4 @@
-name: Studio runner feasibility
+name: Studio private session
 on:
   push:
     branches: [qa/studio-windows-runner-probe]
