@@ -6,25 +6,30 @@ permissions: {}
 jobs:
   probe:
     runs-on: windows-latest
-    timeout-minutes: 5
+    timeout-minutes: 6
     steps:
-      - name: Verify private desktop components
+      - name: Test local-only browser desktop components
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $cli = Join-Path $env:RUNNER_TEMP 'devtunnel.exe'
           $msi = Join-Path $env:RUNNER_TEMP 'tightvnc.msi'
-          Invoke-WebRequest -Uri 'https://aka.ms/TunnelsCliDownload/win-x64' -OutFile $cli
-          $s = Get-AuthenticodeSignature $cli
-          Write-Host ("DevTunnelSignature=" + $s.Status)
-          Write-Host ("DevTunnelSigner=" + $s.SignerCertificate.Subject)
-          Write-Host ("DevTunnelSHA256=" + (Get-FileHash $cli -Algorithm SHA256).Hash)
-          if ($s.Status -ne 'Valid' -or $s.SignerCertificate.Subject -notmatch 'Microsoft') { throw "Microsoft signature failed" }
-          & $cli --version
           Invoke-WebRequest -Uri 'https://www.tightvnc.com/download/2.8.90/tightvnc-2.8.90-gpl-setup-64bit.msi' -OutFile $msi
-          $s2 = Get-AuthenticodeSignature $msi
-          Write-Host ("TightVNCSignature=" + $s2.Status)
-          Write-Host ("TightVNCSigner=" + $s2.SignerCertificate.Subject)
-          Write-Host ("TightVNCSHA256=" + (Get-FileHash $msi -Algorithm SHA256).Hash)
-          if ($s2.Status -ne 'Valid') { throw "TightVNC signature failed" }
-          Write-Host "No account login, tunnel, service, or port was created"
+          $sig = Get-AuthenticodeSignature $msi
+          if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'GlavSoft') { throw 'Invalid signature' }
+          $testpass = [Guid]::NewGuid().ToString('N').Substring(0,8)
+          $args = @('/i', $msi, '/quiet', '/norestart', 'ADDLOCAL=Server', 'SERVER_ADD_FIREWALL_EXCEPTION=0', 'SET_ALLOWLOOPBACK=1', 'VALUE_OF_ALLOWLOOPBACK=1', 'SET_LOOPBACKONLY=1', 'VALUE_OF_LOOPBACKONLY=1', 'SET_ACCEPTHTTPCONNECTIONS=1', 'VALUE_OF_ACCEPTHTTPCONNECTIONS=0', 'SET_USEVNCAUTHENTICATION=1', 'VALUE_OF_USEVNCAUTHENTICATION=1', 'SET_PASSWORD=1', "VALUE_OF_PASSWORD=$testpass")
+          $setup = Start-Process msiexec.exe -ArgumentList $args -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Installer exit $($setup.ExitCode)" }
+          Start-Sleep -Seconds 5
+          $cfg = Get-ItemProperty 'HKLM:\Software\TightVNC\Server'
+          Write-Host ("LoopbackOnly=" + $cfg.LoopbackOnly)
+          Write-Host ("VncAuthentication=" + $cfg.UseVncAuthentication)
+          if ($cfg.LoopbackOnly -ne 1 -or $cfg.UseVncAuthentication -ne 1) { throw 'Unsafe VNC configuration' }
+          $socket = [Net.Sockets.TcpClient]::new()
+          $socket.Connect('127.0.0.1',5900)
+          $bytes = New-Object byte[] 12
+          $count = $socket.GetStream().Read($bytes,0,12)
+          $socket.Dispose()
+          Write-Host ("LocalVNCBanner=" + [Text.Encoding]::ASCII.GetString($bytes,0,$count).Trim())
+          if ($count -ne 12) { throw 'VNC handshake failed' }
+          Write-Host 'NO TUNNEL; NO USER CREDENTIALS; LOOPBACK ONLY'
