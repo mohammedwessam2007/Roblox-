@@ -55,13 +55,13 @@ jobs:
           $ws.Dispose()
           $pub = @'
           -----BEGIN PUBLIC KEY-----
-          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqDfsSfrndiHAVJBiwptn
-          Sx1iv5ZR4ohYHogSWxD6Ayqlf3NNYW0oXg/inrisdhyhbK89yhON19viiDmRfqd0
-          mzq03SvcMK3dY682kpcu/bkzcV3vGQzn/i1xLT1rxAzE+NQMSll3qpnYilkQHq5C
-          EMgsl+4M3hgV1rHDth/KzGt1jSC+otprLfxdAsLRT8nQ4uVG8e0FMJ5feHeItg65
-          PAx7bb9Dx+1sTxOXuXDVWcwePFxKCrGnmGu3QBAQhH/u2F9b0vy01VjrO2C3/2Qy
-          XGsIie4dGCg6eiYOuIaS6qXs9a5DO1cwm700ZZITwqwZW4a7BO6h2o5ncuuiwY3N
-          cQIDAQAB
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAn9MKhPJWXce1ren6DYRg
+          NIcfo25BYct50ubsuRYZGhvR8lQCFVy7G8/oEqROGrM84hRG7jhbpv3ACXdnTizt
+          /uSL62V+lAGEifHhgNTeeGypW2vSzuRKesrFJudnw45QJDKacyStCO/DfBwxrnSD
+          7INOoeaXyPdBL3gTXsDStBvgt4CYJo4o+FjjTwdmDXWdE45FoMlKx9IPht0SgqIv
+          6oIBeQW3qkQj3A6CMwEuqKBk9kWtm78dVm0oBru3ue/YB4PmLyheN8diNX28EFBp
+          HpXPCFMz1oDJM4pnjzcCMC3upWVpuSv2TcW6HI/hItqMS9wGJ9YhKnTpFuYdHYPU
+          NQIDAQAB
           -----END PUBLIC KEY-----
           '@
           $rsa = [Security.Cryptography.RSA]::Create()
