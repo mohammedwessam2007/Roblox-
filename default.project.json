@@ -1,0 +1,21 @@
+{
+  "name": "StealReality",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": { "Shared": { "$path": "src/shared" } },
+    "ServerScriptService": { "Server": { "$path": "src/server" } },
+    "StarterPlayer": {
+      "StarterPlayerScripts": { "Client": { "$path": "src/client" } },
+      "$properties": { "CameraMaxZoomDistance": 90, "CameraMinZoomDistance": 12 }
+    },
+    "Workspace": {
+      "$properties": { "StreamingEnabled": false, "Gravity": 196.2 },
+      "Baseplate": {
+        "$className": "Part",
+        "$properties": { "Anchored": true, "Size": [64, 2, 64], "Position": [0, -200, 0], "Transparency": 1, "CanCollide": true }
+      }
+    },
+    "Lighting": { "$properties": { "ClockTime": 14.5, "Brightness": 2.5, "OutdoorAmbient": [0.55, 0.6, 0.75] } },
+    "Players": { "$properties": { "CharacterAutoLoads": true } }
+  }
+}

@@ -1,0 +1,6 @@
+*.rbxl
+*.rbxlx
+!build/.keep
+sourcemap.json
+node_modules/
+__pycache__/
