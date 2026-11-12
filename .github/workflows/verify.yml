@@ -1,0 +1,37 @@
+name: verify
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install pinned Roblox toolchain
+        run: |
+          mkdir -p bin && cd bin
+          curl -sSL -o rojo.zip https://github.com/rojo-rbx/rojo/releases/download/v7.6.1/rojo-7.6.1-linux-x86_64.zip
+          curl -sSL -o lune.zip https://github.com/lune-org/lune/releases/download/v0.10.4/lune-0.10.4-linux-x86_64.zip
+          curl -sSL -o stylua.zip https://github.com/JohnnyMorganz/StyLua/releases/download/v2.6.0/stylua-linux-x86_64.zip
+          curl -sSL -o lsp.zip https://github.com/JohnnyMorganz/luau-lsp/releases/download/1.70.1/luau-lsp-linux-x86_64.zip
+          for z in *.zip; do unzip -q -o "$z"; done
+          chmod +x rojo lune stylua luau-lsp
+      - name: Run all gates (format, build, strict analyze, place check, tests, emulated runtime, sweep)
+        run: TOOLS="$PWD/bin" tools/verify.sh | tee reports/VERIFY_RUN_CI.txt
+      - name: Real-engine tests via Open Cloud (runs only when secrets are configured)
+        if: ${{ env.ROBLOX_API_KEY != '' }}
+        env:
+          ROJO: ${{ github.workspace }}/bin/rojo
+        run: python3 tools/opencloud/pipeline.py engine-test --universe "${{ vars.ROBLOX_UNIVERSE_ID }}" --place "${{ vars.ROBLOX_PLACE_ID }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: place-and-reports
+          path: |
+            build/StealReality.rbxl
+            reports/

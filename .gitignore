@@ -1,6 +1,7 @@
+!build/.keep
 *.rbxl
 *.rbxlx
-!build/.keep
-sourcemap.json
-node_modules/
 __pycache__/
+build/
+node_modules/
+sourcemap.json
