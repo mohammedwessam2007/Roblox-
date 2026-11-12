@@ -125,6 +125,44 @@ function MatchCore.intent(core: Core, userId: number, raw: any, world: Vec?, now
 		return reject(core, m, why)
 	end
 	m.lastSeq = intent.seq
+	return MatchCore._apply(core, m, intent, world)
+end
+
+-- Server-originated triggers (ProximityPrompts). Roblox already attributes the prompt to the
+-- server-side Player; these never consume or advance the client's sequence space (a shared
+-- counter made the client's next THROW look like a replay — found by the emulated runtime).
+local SERVER_TRIGGERS = { Steal = true, CutPower = true, Reroute = true, OpenEscape = true, GrabCore = true }
+function MatchCore.serverIntent(
+	core: Core,
+	userId: number,
+	action: string,
+	world: Vec?,
+	now: number
+): (boolean, string)
+	local m = core.matches[userId]
+	if m == nil then
+		return false, "no_match"
+	end
+	if not SERVER_TRIGGERS[action] then
+		return reject(core, m, "not_server_trigger")
+	end
+	if not Protocol.take(m.bucket, now) then
+		return reject(core, m, "rate_limited")
+	end
+	return MatchCore._apply(core, m, { seq = m.lastSeq, action = action } :: any, world)
+end
+
+-- After the server itself moves a character (spawn/respawn/fall recovery) the anti-teleport
+-- track must restart from the new legal position, otherwise every later sample is rejected.
+function MatchCore.resetTrack(core: Core, userId: number)
+	local m = core.matches[userId]
+	if m and m.heist then
+		m.heist.player = nil
+	end
+end
+
+function MatchCore._apply(core: Core, m: Match, intent: Protocol.Intent, world: Vec?): (boolean, string)
+	local userId = m.userId
 	if world == nil then
 		return reject(core, m, "no_character")
 	end

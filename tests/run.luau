@@ -32,6 +32,9 @@ end
 function T.mod(name)
 	return Loader.require("src/shared/" .. name .. ".luau")
 end
+T.helper = function(name)
+	return Loader.require("tests/" .. name .. ".luau")
+end
 T.fixture = function(name)
 	return Loader.require("tests/fixtures/" .. name .. ".luau")
 end

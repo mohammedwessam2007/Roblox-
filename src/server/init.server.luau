@@ -17,8 +17,6 @@ local L = Config.Law
 local H = Config.Heist
 local TICK = Config.TICK
 
-Players.MaxPlayers = math.max(Players.MaxPlayers, 1)
-
 -- ---------------- remotes ----------------
 local intentRemote = Instance.new("RemoteEvent")
 intentRemote.Name = Protocol.REMOTE_INTENT
@@ -87,14 +85,8 @@ local function routePrompt(player: Player, action: string)
 	if not m then
 		return
 	end
-	-- prompts are server-side triggers; still go through the same validated path
-	MatchCore.intent(
-		core,
-		player.UserId,
-		{ seq = m.lastSeq + 1, action = action },
-		worldPos(player.UserId),
-		os.clock()
-	)
+	-- prompts are server-side triggers; own path, never touches the client's seq space
+	MatchCore.serverIntent(core, player.UserId, action, worldPos(player.UserId), os.clock())
 end
 
 local function buildArena(player: Player, m: MatchCore.Match)
@@ -126,6 +118,7 @@ local function buildArena(player: Player, m: MatchCore.Match)
 	local character = player.Character
 	if character and rootOf(player) then
 		character:PivotTo(spawnCFrame(m))
+		MatchCore.resetTrack(core, player.UserId)
 	end
 end
 
@@ -140,6 +133,7 @@ Players.PlayerAdded:Connect(function(player: Player)
 			character:WaitForChild("HumanoidRootPart", 5)
 			task.defer(function()
 				character:PivotTo(spawnCFrame(mm))
+				MatchCore.resetTrack(core, player.UserId)
 			end)
 		end
 	end)
@@ -308,6 +302,7 @@ task.spawn(function()
 			local character = player.Character
 			if r and m and character and r.Position.Y < -60 then
 				character:PivotTo(spawnCFrame(m))
+				MatchCore.resetTrack(core, player.UserId)
 			end
 		end
 	end

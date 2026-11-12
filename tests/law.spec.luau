@@ -32,14 +32,13 @@ return function(T)
 		T.eq(s.phase, "Live"); T.eq(s.lawball, "Held")
 	end)
 
-	T.test("skilled straight THROW scores exactly once via server witness", function()
+	T.test("skilled line (stun bot, then throw at Vault) scores exactly once via server witness", function()
 		local s = live()
-		T.ok(LawSim.apply(s, { action = "Throw", aimX = 0, aimZ = 1, power = 1 }, { x = 0, z = -50 }))
-		run(s, 12)
+		local P = { x = 0, z = -50 }
+		T.helper("skilled")(LawSim, Config, function(i, pos) return LawSim.apply(s, i, pos or P) end, function() LawSim.step(s, DT) end, function() return { law = s } end, P)
 		T.eq(s.phase, "Won", "phase")
 		T.ok(s.certificate and s.certificate.scoredEventId == "t:r1:" .. Config.RULESET_VERSION, "id")
 		T.eq(s.certificate.causeKind, "throw")
-		-- further observation cannot mint a second certificate
 		T.eq(GW.observe(s.witness, L.vault, L.vault.x, L.vault.z, s.now, s.now, "throw"), nil)
 	end)
 
@@ -199,6 +198,23 @@ return function(T)
 			T.ok(math.abs(c.x) <= L.halfX and c.z >= L.minZ and c.z <= L.maxZ, "bounded")
 			T.ok(#s.events <= 64, "event cap")
 			LawSim.drainEvents(s)
+		end
+	end)
+
+	T.test("REGRESSION: bot counter never pushes cargo toward the Vault", function()
+		for _, start in { { 0, 10 }, { 0, 30 }, { 20, 40 }, { -25, 0 } } do
+			local s = live()
+			s.chicken.x, s.chicken.z, s.chicken.vx, s.chicken.vz = start[1], start[2], 0, 0
+			s.bot.x, s.bot.z = start[1], start[2] - 12
+			s.bot.state, s.bot.untilT = "Telegraph", s.now
+			s.lastCause = { at = s.now, kind = "throw" }
+			local v = Config.Law.vault
+			local before = math.sqrt((s.chicken.x - v.x) ^ 2 + (s.chicken.z - v.z) ^ 2)
+			LawSim.step(s, DT)
+			T.eq(s.stats.botCounters, 1, "counter fired")
+			local after = math.sqrt((s.chicken.x - v.x) ^ 2 + (s.chicken.z - v.z) ^ 2)
+			T.ok(after >= before, "moved toward vault from " .. start[1] .. "," .. start[2])
+			T.ok(s.chicken.vx * (v.x - s.chicken.x) + s.chicken.vz * (v.z - s.chicken.z) <= 0, "velocity points away from vault")
 		end
 	end)
 end

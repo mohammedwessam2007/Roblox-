@@ -6,7 +6,7 @@
 **Persistence:** committed and pushed to `mohammedwessam2007/Roblox-` on branch `claude/optimistic-shannon-bkv3f3`. Check `git log` for the SHA.
 
 ## Reached
-`CODE_WRITTEN → LUAU_COMPILED/TYPECHECKED → LUAU_TESTED (37/37) → ROJO_BUILT`.
+`CODE_WRITTEN → LUAU_TYPECHECKED → LUAU_TESTED (40/40) → ROJO_BUILT → G2-EMULATED (29/29, real scripts, not Studio)`. The emulated run found and fixed 4 real defects, 2 of them game-breaking (`docs/negative-results/NR-003`).
 Evidence: `docs/ACTUAL_TEST_RECEIPTS.md`, `reports/VERIFY_RUN.txt`.
 
 ## Not reached (honest)
@@ -18,13 +18,17 @@ Studio single- and two-client runs, the network simulator, a real Android device
 - **Platform:** zero-CCU solo works with no DataStore, no ghosts and no other players. Adaptive Reality offers 5 tiers plus Auto. Reduced motion and sound toggles. Touch, mouse/keyboard and gamepad paths.
 - **Docs:** art bible, sound catalog, 12 original synthesized WAVs with SHA-256 provenance, playtest packet (AB/BA), economics scenarios (illustrative), store matrix (disabled placeholders), publishing, rollback, marketing shot list, risk board, analytics dictionary.
 
-## Next authorized task
-Owner opens `build/StealReality.rbxl` in Studio (rebuild with `rojo build`) and plays single-client, then **Test → Server & 2 Clients** with the network simulator at 150 ms. Report the Output log. I fix whatever breaks.
+## Next task
+The owner asked to stay out of the loop, so nothing is pending on them for the work Claude can do. Claude-side backlog, in order:
+1. Client-side smoothing of server-driven parts. Anchored-part replication can look steppy at real network rates.
+2. Gamepad aim using the right stick instead of camera-forward.
+3. A podium and cosmetic preview, behind their existing flags and only after replay evidence exists.
 
-## Owner-only blockers (max 3)
-1. **Studio run.** Install Rojo 7.6.1, run `rojo build default.project.json -o StealReality.rbxl`, open the file in Studio and press Play. Cost: $0, about 10 minutes. Safe default: nothing is published.
-2. **Audio upload.** Upload `assets/audio/*.wav` via Creator Hub → Audio (free quota permitting) and paste the ids into `SOUND_IDS` in `src/client/init.client.luau`. Safe default: silent, with visual parity.
-3. **Pilot approval.** Approve (or don't) recruiting 10–20 consenting first-time players per `docs/playtest/PRE_REGISTERED_PILOT.md`. Safe default: no outreach.
+## Gated outside Claude's reach (parked, no action requested)
+These need the owner's Roblox account or explicit consent. They are not done and are not claimed:
+- A real Studio and device run. This environment has no Studio, so G2/G3/G4 are NOT_RUN.
+- Uploading audio (needs account credentials). The game is silent, with visual parity.
+- Recruiting human players, publishing, store activation, and DevEx. These need explicit approval and the account, and there is no auto-approval.
 
 ## Rollback
 Every step is a git commit; `git revert <sha>`. Nothing has been deployed, so nothing needs rolling back live.

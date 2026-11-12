@@ -12,10 +12,10 @@ ANALYZE_OK
 == G0 place structure
 ReplicatedStorage.Shared -> Folder
   Config           ModuleScript 3571 bytes
-  LawSim           ModuleScript 14582 bytes
+  LawSim           ModuleScript 14665 bytes
   HeistSim         ModuleScript 9116 bytes
   GoalWitness      ModuleScript 2420 bytes
-  MatchCore        ModuleScript 6619 bytes
+  MatchCore        ModuleScript 8004 bytes
   Protocol         ModuleScript 3143 bytes
   ElasticRecovery  ModuleScript 2055 bytes
   AdaptiveQuality  ModuleScript 3984 bytes
@@ -39,7 +39,7 @@ PLACE_STRUCTURE_OK
 == law.spec.luau
   PASS steal rejected when far from chicken
   PASS steal near chicken -> Live, lawball held
-  PASS skilled straight THROW scores exactly once via server witness
+  PASS skilled line (stun bot, then throw at Vault) scores exactly once via server witness
   PASS a THROW aimed away genuinely misses: no score, miss certified
   PASS weak/off-angle throw can hit yet still fail to score (no hidden steering)
   PASS elastic recovery: once per real miss, inside window only, never scores
@@ -52,6 +52,7 @@ PLACE_STRUCTURE_OK
   PASS timeout -> Lost; AGAIN only after outcome and bumps round
   PASS gravity snaps back after abandonment (recoverable, not a loss)
   PASS fuzz: 20k random intents/steps keep sim finite and bounded
+  PASS REGRESSION: bot counter never pushes cargo toward the Vault
 == security.spec.luau
   PASS RED reproduction: naive fixture accepts forged SCORE (CR-001 defect exists there)
   PASS RED reproduction: naive fixture leaks A's throw into B's cargo (CR-002 defect)
@@ -65,10 +66,60 @@ PLACE_STRUCTURE_OK
   PASS AGAIN after win starts a new round with a distinct scoredEventId
   PASS slots are distinct, freed on leave and reused; no state carries over
   PASS ChooseMode switches to Grid Heist only between rounds
+  PASS REGRESSION (emulated runtime): prompt STEAL does not burn client seq; next THROW accepted
+  PASS REGRESSION (emulated runtime): server respawn resets heist anti-teleport track
 
-RESULT: 37 passed, 0 failed
+RESULT: 40 passed, 0 failed
+== G2-emulated: real server+client scripts in emulated Roblox runtime (NOT Studio)
+== boot server Script
+[SR] Steal Reality server ready law-1.0.0 heist-1.0.0
+PASS server script runs without error
+PASS remotes created
+== player joins (zero other players, no DataStore, no ghosts)
+PASS solo Law arena built for first player
+PASS chicken + capsule + vault + bot exist
+== boot client LocalScript
+PASS client script runs without error
+PASS HUD built
+PASS server snapshot reaches client (Ready)
+== T=0-8s: walk to chicken, STEAL via ProximityPrompt
+PASS steal prompt enabled while Ready
+PASS phase Live after STEAL
+PASS THROW button visible after steal
+PASS prompt disabled after steal
+== T=8-30s: THROW via real client input path (hold F, release) aimed at the Vault
+PASS lawball left the hand (Flying/Returning)
+PASS goal certified by server within the round
+PASS scoredEventId present
+PASS IMPOSSIBLE! outcome card visible
+== T=60-90s: one-tap AGAIN
+PASS AGAIN -> new round Ready
+PASS card hidden after AGAIN
+== zero-trust: forged payloads from this client
+[SR] rejected unknown_action
+[SR] rejected unknown_field:score
+[SR] rejected not_table
+[SR] rejected bad_value:aimX
+PASS forged remotes produce no score and no phase change
+== second player gets an isolated arena; leaving cleans up
+PASS player 2 arena built in separate slot
+PASS player 2 arena destroyed on leave
+== OTHER GAME: switch to Grid Heist
+PASS snapshot mode GridHeist
+PASS heist city built (drone vision, core, substation)
+PASS old Law arena removed
+PASS CUT POWER -> blackout
+PASS server lamps go dark
+PASS client blackout color grade on
+PASS REROUTE SECURITY chosen (exclusive)
+== teleport exploit: jump straight to the exit
+PASS teleport to exit does not win
+== analytics events logged server-side (names only, no PII)
+PASS goal + steal + replay events logged
+
+EMULATED_RUNTIME: 29 passed, 0 failed, 0 script errors
 == balance sweep
-single-throw shots simulated=2356 scored=149 (6.3%)
+single-throw shots simulated=2356 scored=51 (2.2%)
 == sha256 of built place
-36b6150c7dbd720f150e3339de4287bf71975b5284d159c4ab0f51a20ef645b5  build/StealReality.rbxl
+84266f120585470ec3226ed8fc4510262f8c650f914f21d86a3600b693fb9888  build/StealReality.rbxl
 OVERALL_STATUS=0

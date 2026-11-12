@@ -9,8 +9,9 @@ Full raw log: `reports/VERIFY_RUN.txt`, produced by `TOOLS=<bins> tools/verify.s
 | G0 lint (Selene) | **NOT_RUN** | blocked; see `docs/negative-results/NR-002` |
 | LUAU strict typecheck | PASS | `luau-lsp 1.70.1 analyze` with the Roblox `globalTypes.d.luau` and a Rojo sourcemap: 0 diagnostics over all server, client and shared scripts |
 | ROJO_BUILT | PASS | `rojo 7.6.1 build` → `build/StealReality.rbxl` (git-ignored; rebuild with the command). Structure verified by `tools/inspect_place.luau` → `PLACE_STRUCTURE_OK` |
-| LUAU_TESTED (G1 headless) | PASS 37/37 | `lune 0.10.4 run tests/run.luau`. The tests execute the same ModuleScripts the server runs |
-| Balance sweep | RUN | `reports/BALANCE_SWEEP.csv`. 2,356 simulated single throws. Precise (<5°) full-power shots score 56%; shots >10° off score ~0% unless they bank off geometry. Simulation only, **not player data** |
+| LUAU_TESTED (G1 headless) | PASS 40/40 | `lune 0.10.4 run tests/run.luau`. The tests execute the same ModuleScripts the server runs |
+| Balance sweep | RUN | `reports/BALANCE_SWEEP.csv`. 2,356 simulated single throws. After the bot-counter fix (NR-003), a precise (<5°) full-power shot from spawn scores 46% on its own; otherwise the player must stun the bot or use a well; shots >10° off score ~0% unless they bank off geometry. Simulation only, **not player data** |
+| G2-EMULATED runtime | PASS 29/29, 0 script errors | `tests/engine/emulated_runtime.luau` runs the **built** Server Script + Client LocalScript against Lune's reflection-validated Roblox instance model with emulated services: join, HUD build, prompt STEAL, client F-key aim THROW, bot counter, bot stun, server-certified goal, AGAIN, forged remotes, 2nd player isolation/cleanup, OTHER GAME, Heist blackout/lamps/color grade, REROUTE, teleport rejection, analytics names. Found 4 real defects (NR-003). **Not Studio**: no physics, rendering, replication or real networking |
 | STUDIO_SINGLE_CLIENT (G2) | **NOT_RUN** | no Studio in this environment |
 | STUDIO_2_CLIENT / 150 ms RTT (G3) | **NOT_RUN** | — |
 | REAL_ANDROID (G4) | **NOT_RUN** | — |

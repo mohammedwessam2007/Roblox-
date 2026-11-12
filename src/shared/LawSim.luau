@@ -350,8 +350,9 @@ local function stepBot(s: State, dt: number)
 	if bot.state == "Telegraph" then
 		if s.now >= bot.untilT then
 			if dist(bot.x, bot.z, c.x, c.z) <= L.botCounterRange then
-				-- shove the cargo directly away from the bot: readable, dodgeable, never lethal
-				local dx, dz = c.x - bot.x, c.z - bot.z
+				-- shove the cargo back AWAY FROM THE VAULT (never toward it: a counter must not
+				-- assist a goal — found by the emulated-runtime trace). Readable, never lethal.
+				local dx, dz = c.x - v.x, c.z - v.z
 				local d = math.max(1e-3, math.sqrt(dx * dx + dz * dz))
 				c.vx += dx / d * L.botCounterImpulse
 				c.vz += dz / d * L.botCounterImpulse

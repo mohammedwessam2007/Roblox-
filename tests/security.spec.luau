@@ -28,6 +28,20 @@ return function(T)
 		return c, a, b, log
 	end
 	local function posA(m, x, z) return { x = m.origin.x + x, z = m.origin.z + z } end
+	local LawSim = T.mod("LawSim")
+	local seqs = {}
+	local function skilledWin(c, m, t0)
+		local P = { x = 0, z = -50 }
+		seqs[m.userId] = math.max(seqs[m.userId] or 0, m.lastSeq)
+		local now = t0
+		T.helper("skilled")(LawSim, Config, function(i, pos)
+			seqs[m.userId] += 1
+			now += 1
+			local raw = { seq = seqs[m.userId], action = i.action, aimX = i.aimX, aimZ = i.aimZ, power = i.power }
+			local at = pos or P
+			return MatchCore.intent(c, m.userId, raw, posA(m, at.x, at.z), now)
+		end, function() MatchCore.step(c, DT, function() return nil end) end, function() return m end, P)
+	end
 
 	T.test("GREEN: forged SCORE / win / goal remotes are rejected and award nothing", function()
 		local c, a = core2()
@@ -90,13 +104,15 @@ return function(T)
 			MatchCore.intent(c, 101, { seq = 1, action = "Steal" }, posA(a, 0, -50), 0)
 			MatchCore.intent(c, 202, { seq = 1, action = "Steal" }, posA(b, 0, -50), 0)
 			if aThrows then
-				MatchCore.intent(c, 101, { seq = 2, action = "Throw", aimX = 0, aimZ = 1, power = 1 }, posA(a, 0, -50), 0.1)
+				skilledWin(c, a, 0)
 			end
-			for _ = 1, 12 / DT do MatchCore.step(c, DT, function() return nil end) end
 			return c, a, b
 		end
 		local c1, a1, b1 = scenario(true)
-		local _, _, b0 = scenario(false)
+		local c0, _, b0 = scenario(false)
+		-- run both worlds to the same simulated time for B before comparing
+		while b0.law.now < b1.law.now - 1e-9 do MatchCore.step(c0, DT, function() return nil end) end
+		T.ok(math.abs(b0.law.now - b1.law.now) < 1e-9, "same simulated time")
 		T.eq(a1.law.phase, "Won", "A scored")
 		for _, k in { "x", "z", "vx", "vz" } do T.eq(b1.law.chicken[k], b0.law.chicken[k], "B chicken " .. k) end
 		T.eq(b1.law.bot.x, b0.law.bot.x); T.eq(b1.law.bot.state, b0.law.bot.state)
@@ -115,8 +131,8 @@ return function(T)
 	T.test("award ledger: certified goal awarded exactly once across 1000 extra ticks", function()
 		local c, a, _, log = core2()
 		MatchCore.intent(c, 101, { seq = 1, action = "Steal" }, posA(a, 0, -50), 0)
-		MatchCore.intent(c, 101, { seq = 2, action = "Throw", aimX = 0, aimZ = 1, power = 1 }, posA(a, 0, -50), 0.1)
-		for _ = 1, 1400 do MatchCore.step(c, DT, function() return nil end) end
+		skilledWin(c, a, 0)
+		for _ = 1, 1000 do MatchCore.step(c, DT, function() return nil end) end
 		T.eq(c.awards[101], 1)
 		local n = 0
 		for _, e in log do if e.name == "goal_server_certified" then n += 1 end end
@@ -127,13 +143,11 @@ return function(T)
 		local c, a = core2()
 		local p = posA(a, 0, -50)
 		MatchCore.intent(c, 101, { seq = 1, action = "Steal" }, p, 0)
-		MatchCore.intent(c, 101, { seq = 2, action = "Throw", aimX = 0, aimZ = 1, power = 1 }, p, 0.2)
-		for _ = 1, 400 do MatchCore.step(c, DT, function() return nil end) end
+		skilledWin(c, a, 0)
 		local id1 = a.law.certificate.scoredEventId
-		T.ok(MatchCore.intent(c, 101, { seq = 3, action = "Again" }, p, 2))
-		MatchCore.intent(c, 101, { seq = 4, action = "Steal" }, p, 3)
-		MatchCore.intent(c, 101, { seq = 5, action = "Throw", aimX = 0, aimZ = 1, power = 1 }, p, 4)
-		for _ = 1, 400 do MatchCore.step(c, DT, function() return nil end) end
+		T.ok(MatchCore.intent(c, 101, { seq = 50, action = "Again" }, p, 100))
+		MatchCore.intent(c, 101, { seq = 51, action = "Steal" }, p, 101)
+		skilledWin(c, a, 102)
 		T.ok(a.law.certificate.scoredEventId ~= id1, "distinct id")
 		T.eq(c.awards[101], 2)
 	end)
@@ -155,5 +169,25 @@ return function(T)
 		MatchCore.intent(c, 101, { seq = 3, action = "Steal" }, posA(a, 0, -50), 2)
 		local ok, why = MatchCore.intent(c, 101, { seq = 4, action = "ChooseMode", mode = "GridHeist" }, posA(a, 0, -50), 3)
 		T.eq(ok, false); T.eq(why, "round_active")
+	end)
+
+	T.test("REGRESSION (emulated runtime): prompt STEAL does not burn client seq; next THROW accepted", function()
+		local c, a = core2()
+		T.ok(MatchCore.serverIntent(c, 101, "Steal", posA(a, 0, -50), 0))
+		local ok, why = MatchCore.intent(c, 101, { seq = 1, action = "Throw", aimX = 0, aimZ = 1, power = 1 }, posA(a, 0, -50), 0.1)
+		T.ok(ok, why)
+		local ok2, why2 = MatchCore.serverIntent(c, 101, "Throw", posA(a, 0, -50), 0.2)
+		T.eq(ok2, false); T.eq(why2, "not_server_trigger")
+	end)
+
+	T.test("REGRESSION (emulated runtime): server respawn resets heist anti-teleport track", function()
+		local c, a = core2()
+		MatchCore.intent(c, 101, { seq = 1, action = "ChooseMode", mode = "GridHeist" }, posA(a, 0, 0), 0)
+		MatchCore.step(c, DT, function() return posA(a, -58, -58) end)
+		-- server pivots the character far away (respawn); without reset every sample is rejected
+		MatchCore.resetTrack(c, 101)
+		MatchCore.step(c, DT, function() return posA(a, -56, -36) end)
+		T.eq(a.heist.player.z, -36)
+		T.ok(MatchCore.serverIntent(c, 101, "CutPower", posA(a, -56, -36), 1))
 	end)
 end
