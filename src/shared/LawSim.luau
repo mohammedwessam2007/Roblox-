@@ -35,7 +35,16 @@ export type State = {
 	lastCause: { at: number, kind: string }?,
 	witness: GoalWitness.Witness,
 	certificate: GoalWitness.Certificate?,
-	stats: { throws: number, hits: number, plants: number, misses: number, recoveries: number, bounces: number, botStuns: number, botCounters: number },
+	stats: {
+		throws: number,
+		hits: number,
+		plants: number,
+		misses: number,
+		recoveries: number,
+		bounces: number,
+		botStuns: number,
+		botCounters: number,
+	},
 	events: { Event },
 	flags: { elasticRecovery: boolean },
 }
@@ -81,7 +90,16 @@ function LawSim.new(matchId: string, round: number?, flags: { elasticRecovery: b
 		lastCause = nil,
 		witness = GoalWitness.new(matchId, r, Config.RULESET_VERSION, L.dwellTicks, L.causalWindowSeconds),
 		certificate = nil,
-		stats = { throws = 0, hits = 0, plants = 0, misses = 0, recoveries = 0, bounces = 0, botStuns = 0, botCounters = 0 },
+		stats = {
+			throws = 0,
+			hits = 0,
+			plants = 0,
+			misses = 0,
+			recoveries = 0,
+			bounces = 0,
+			botStuns = 0,
+			botCounters = 0,
+		},
 		events = {},
 		flags = flags or { elasticRecovery = Config.Flags.ElasticRecovery },
 	}
@@ -168,7 +186,10 @@ function LawSim.apply(s: State, intent: Intent, player: Vec): (boolean, string)
 			return false, "plant_out_of_arena"
 		end
 		local v = L.vault
-		if math.abs(x - v.x) <= v.hx + L.wellVaultExclusion and math.abs(z - v.z) <= v.hz + L.wellVaultExclusion then
+		if
+			math.abs(x - v.x) <= v.hx + L.wellVaultExclusion
+			and math.abs(z - v.z) <= v.hz + L.wellVaultExclusion
+		then
 			return false, "plant_in_vault_zone"
 		end
 		s.lawball = "Planted"
@@ -466,7 +487,9 @@ end
 
 -- Compact snapshot for the owning client (presentation only)
 function LawSim.snapshot(s: State): { [string]: any }
-	local remaining = if s.startedAt then math.max(0, Config.ROUND_SECONDS - (s.now - s.startedAt)) else Config.ROUND_SECONDS
+	local remaining = if s.startedAt
+		then math.max(0, Config.ROUND_SECONDS - (s.now - s.startedAt))
+		else Config.ROUND_SECONDS
 	if s.endedAt and s.startedAt then
 		remaining = math.max(0, Config.ROUND_SECONDS - (s.endedAt - s.startedAt))
 	end

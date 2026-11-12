@@ -59,7 +59,13 @@ function ElasticRecovery.evaluate(c: Context): Decision
 	if c.nowSeconds < c.nextRecoveryAllowedAt then
 		return deny("cooldown")
 	end
-	return { allowed = true, reason = "server_authorized_recall", recallLawball = true, grantScore = false, nudgeCargo = false }
+	return {
+		allowed = true,
+		reason = "server_authorized_recall",
+		recallLawball = true,
+		grantScore = false,
+		nudgeCargo = false,
+	}
 end
 
 return table.freeze(ElasticRecovery)

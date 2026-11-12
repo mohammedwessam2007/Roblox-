@@ -11,7 +11,14 @@ AdaptiveQuality.TIERS = table.freeze({ "Survival", "Lite", "Balanced", "High", "
 -- Decorative budget per tier. Essential gameplay cues are not in this table on purpose.
 AdaptiveQuality.PROFILES = table.freeze({
 	table.freeze({ particles = 0.0, trails = false, decor = 0.0, shadows = false, bloom = false, clouds = 0 }),
-	table.freeze({ particles = 0.25, trails = false, decor = 0.3, shadows = false, bloom = false, clouds = 4 }),
+	table.freeze({
+		particles = 0.25,
+		trails = false,
+		decor = 0.3,
+		shadows = false,
+		bloom = false,
+		clouds = 4,
+	}),
 	table.freeze({ particles = 0.5, trails = true, decor = 0.6, shadows = true, bloom = false, clouds = 10 }),
 	table.freeze({ particles = 0.8, trails = true, decor = 0.85, shadows = true, bloom = true, clouds = 18 }),
 	table.freeze({ particles = 1.0, trails = true, decor = 1.0, shadows = true, bloom = true, clouds = 28 }),
@@ -53,20 +60,49 @@ function AdaptiveQuality.new(startTier: number?, auto: boolean?, now: number?): 
 end
 
 function AdaptiveQuality.setManual(c: Controller, tier: number): Controller
-	return { tier = clampTier(tier), auto = false, slowSeconds = 0, fastSeconds = 0, lastSwitchSeconds = c.lastSwitchSeconds, startedAt = c.startedAt }
+	return {
+		tier = clampTier(tier),
+		auto = false,
+		slowSeconds = 0,
+		fastSeconds = 0,
+		lastSwitchSeconds = c.lastSwitchSeconds,
+		startedAt = c.startedAt,
+	}
 end
 
 function AdaptiveQuality.setAuto(c: Controller): Controller
-	return { tier = c.tier, auto = true, slowSeconds = 0, fastSeconds = 0, lastSwitchSeconds = c.lastSwitchSeconds, startedAt = c.startedAt }
+	return {
+		tier = c.tier,
+		auto = true,
+		slowSeconds = 0,
+		fastSeconds = 0,
+		lastSwitchSeconds = c.lastSwitchSeconds,
+		startedAt = c.startedAt,
+	}
 end
 
 -- frameMs: measured client frame time; maxTier: cap (e.g. from the player's own Roblox
 -- graphics quality level), respected so we never fight the user's platform setting.
-function AdaptiveQuality.sample(c: Controller, frameMs: number, elapsed: number, now: number, maxTier: number): (Controller, string)
+function AdaptiveQuality.sample(
+	c: Controller,
+	frameMs: number,
+	elapsed: number,
+	now: number,
+	maxTier: number
+): (Controller, string)
 	if not c.auto then
 		return c, "manual_override"
 	end
-	if not (finite(frameMs) and frameMs > 0 and finite(elapsed) and elapsed > 0 and finite(now) and finite(maxTier)) then
+	if
+		not (
+			finite(frameMs)
+			and frameMs > 0
+			and finite(elapsed)
+			and elapsed > 0
+			and finite(now)
+			and finite(maxTier)
+		)
+	then
 		return c, "invalid_sample"
 	end
 	if now - c.startedAt < WARMUP_SECONDS then
@@ -95,7 +131,8 @@ function AdaptiveQuality.sample(c: Controller, frameMs: number, elapsed: number,
 		fastSeconds = if switched then 0 else fast,
 		lastSwitchSeconds = if switched then now else c.lastSwitchSeconds,
 		startedAt = c.startedAt,
-	}, reason
+	},
+		reason
 end
 
 return table.freeze(AdaptiveQuality)

@@ -31,7 +31,13 @@ local function finite(n: number): boolean
 	return n == n and n ~= math.huge and n ~= -math.huge
 end
 
-function GoalWitness.new(matchId: string, round: number, ruleset: string, dwellTicks: number, causalWindow: number): Witness
+function GoalWitness.new(
+	matchId: string,
+	round: number,
+	ruleset: string,
+	dwellTicks: number,
+	causalWindow: number
+): Witness
 	return {
 		matchId = matchId,
 		round = round,

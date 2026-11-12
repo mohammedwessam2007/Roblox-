@@ -1,0 +1,74 @@
+== versions
+Rojo 7.6.1
+lune 0.10.4
+stylua 2.6.0
+1.70.1
+== G0 format check (stylua --check)
+== G0 rojo build
+Building project 'StealReality'
+Built project to StealReality.rbxl
+== G0 strict type analysis (luau-lsp + Roblox definitions)
+ANALYZE_OK
+== G0 place structure
+ReplicatedStorage.Shared -> Folder
+  Config           ModuleScript 3571 bytes
+  LawSim           ModuleScript 14582 bytes
+  HeistSim         ModuleScript 9116 bytes
+  GoalWitness      ModuleScript 2420 bytes
+  MatchCore        ModuleScript 6619 bytes
+  Protocol         ModuleScript 3143 bytes
+  ElasticRecovery  ModuleScript 2055 bytes
+  AdaptiveQuality  ModuleScript 3984 bytes
+ServerScriptService.Server -> Script
+  WorldBuilder     ModuleScript 17978 bytes
+StarterPlayerScripts.Client -> LocalScript 25643 bytes
+PLACE_STRUCTURE_OK
+== G1 headless Luau tests
+== adaptive.spec.luau
+  PASS auto tier drops only after sustained overload, with cooldown hysteresis
+  PASS respects user cap, manual override, invalid samples
+  PASS fairness: no profile field touches gameplay constants
+== heist.spec.luau
+  PASS CUT POWER requires proximity; blackout shrinks drone vision
+  PASS choice: REROUTE vs OPEN ESCAPE are exclusive and need power cut
+  PASS buildings block drone line of sight
+  PASS anti-teleport: impossible displacement rejected, track kept
+  PASS teleporting to the exit with the core does not win
+  PASS standing in drone view gets caught; escape without core impossible
+  PASS walking (speed-bounded) to exit with core wins exactly once
+== law.spec.luau
+  PASS steal rejected when far from chicken
+  PASS steal near chicken -> Live, lawball held
+  PASS skilled straight THROW scores exactly once via server witness
+  PASS a THROW aimed away genuinely misses: no score, miss certified
+  PASS weak/off-angle throw can hit yet still fail to score (no hidden steering)
+  PASS elastic recovery: once per real miss, inside window only, never scores
+  PASS elastic recovery denied after window, without miss, and when flag off
+  PASS cargo inside vault without causal action never scores
+  PASS expired cause cannot score
+  PASS witness: interrupted dwell resets; NaN rejected; idempotent
+  PASS PLANT: range, vault exclusion, and real attraction
+  PASS bot telegraphs before countering; a lawball stuns it
+  PASS timeout -> Lost; AGAIN only after outcome and bumps round
+  PASS gravity snaps back after abandonment (recoverable, not a loss)
+  PASS fuzz: 20k random intents/steps keep sim finite and bounded
+== security.spec.luau
+  PASS RED reproduction: naive fixture accepts forged SCORE (CR-001 defect exists there)
+  PASS RED reproduction: naive fixture leaks A's throw into B's cargo (CR-002 defect)
+  PASS GREEN: forged SCORE / win / goal remotes are rejected and award nothing
+  PASS GREEN: forged fields (score, userId, position, matchId) rejected
+  PASS schema: replay, NaN, inf, wrong types, metatables, oversize, missing fields
+  PASS rate limit: burst of 30 intents -> only bucket capacity accepted
+  PASS CR-002: A's throw leaves B bit-identical to a control run without it
+  PASS CR-002: standing in another player's arena cannot steal their chicken
+  PASS award ledger: certified goal awarded exactly once across 1000 extra ticks
+  PASS AGAIN after win starts a new round with a distinct scoredEventId
+  PASS slots are distinct, freed on leave and reused; no state carries over
+  PASS ChooseMode switches to Grid Heist only between rounds
+
+RESULT: 37 passed, 0 failed
+== balance sweep
+single-throw shots simulated=2356 scored=149 (6.3%)
+== sha256 of built place
+36b6150c7dbd720f150e3339de4287bf71975b5284d159c4ab0f51a20ef645b5  build/StealReality.rbxl
+OVERALL_STATUS=0

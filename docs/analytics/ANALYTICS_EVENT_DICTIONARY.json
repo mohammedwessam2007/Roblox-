@@ -1,0 +1,21 @@
+{
+  "note": "These events are currently logged to server output only. There is no external analytics sink. No player data has been collected.",
+  "status": "NOT_RUN",
+  "retention_default": "server log lifetime only; no persistent storage",
+  "events": {
+    "session_started": {"description": "Player joined and session began", "fields": ["session_id", "ruleset_version", "ts"], "source": "server", "pii": false, "retention": "server log only"},
+    "mode_chosen": {"description": "Player chose LawSport or GridHeist", "fields": ["session_id", "mode", "ts"], "source": "server", "pii": false, "retention": "server log only"},
+    "steal_succeeded": {"description": "STEAL accepted within range", "fields": ["session_id", "t_since_start", "distance"], "source": "server", "pii": false, "retention": "server log only"},
+    "throw_selected": {"description": "Player chose THROW after steal", "fields": ["session_id", "t_since_start"], "source": "server", "pii": false, "retention": "server log only"},
+    "plant_selected": {"description": "Player chose PLANT after steal", "fields": ["session_id", "t_since_start"], "source": "server", "pii": false, "retention": "server log only"},
+    "recovery_used": {"description": "Elastic Recovery Tether recall used", "fields": ["session_id", "t_since_miss"], "source": "server", "pii": false, "retention": "server log only"},
+    "goal_server_certified": {"description": "GoalWitness certified a goal, one scoredEventId", "fields": ["session_id", "scoredEventId", "round_seconds"], "source": "server", "pii": false, "retention": "server log only"},
+    "round_fail": {"description": "Round ended without a certified goal", "fields": ["session_id", "reason", "round_seconds"], "source": "server", "pii": false, "retention": "server log only"},
+    "voluntary_replay": {"description": "Player pressed AGAIN", "fields": ["session_id", "mode", "round_index"], "source": "server", "pii": false, "retention": "server log only"},
+    "exit": {"description": "Player left", "fields": ["session_id", "seconds_played", "mode"], "source": "server", "pii": false, "retention": "server log only"},
+    "heist_blackout": {"description": "CUT POWER succeeded, 22 s blackout began", "fields": ["session_id", "t_since_start"], "source": "server", "pii": false, "retention": "server log only"},
+    "heist_rerouted": {"description": "REROUTE SECURITY chosen", "fields": ["session_id", "t_since_start"], "source": "server", "pii": false, "retention": "server log only"},
+    "heist_gate_open": {"description": "OPEN ESCAPE chosen, alarm triggered", "fields": ["session_id", "t_since_start"], "source": "server", "pii": false, "retention": "server log only"},
+    "heist_grabbed": {"description": "GRAB CORE completed", "fields": ["session_id", "t_since_start"], "source": "server", "pii": false, "retention": "server log only"}
+  }
+}

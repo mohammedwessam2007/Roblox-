@@ -13,7 +13,11 @@ Protocol.REMOTE_STATE = "SR_State"
 -- action -> allowed numeric fields (besides seq/action)
 local SCHEMA: { [string]: { [string]: { min: number, max: number } } } = {
 	Steal = {},
-	Throw = { aimX = { min = -1.5, max = 1.5 }, aimZ = { min = -1.5, max = 1.5 }, power = { min = 0, max = 1 } },
+	Throw = {
+		aimX = { min = -1.5, max = 1.5 },
+		aimZ = { min = -1.5, max = 1.5 },
+		power = { min = 0, max = 1 },
+	},
 	Plant = { x = { min = -200, max = 200 }, z = { min = -200, max = 200 } },
 	Recover = {},
 	Again = {},

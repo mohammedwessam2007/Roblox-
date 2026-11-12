@@ -149,7 +149,12 @@ function MatchCore.intent(core: Core, userId: number, raw: any, world: Vec?, now
 			log(core, userId, "voluntary_replay", { mode = m.mode, previous = before, round = m.law.round })
 			m.law = LawSim.again(m.law)
 		elseif ok then
-			local name = ({ stolen = "steal_succeeded", thrown = "throw_selected", planted = "plant_selected", recovered = "recovery_used" })[reason]
+			local name = ({
+				stolen = "steal_succeeded",
+				thrown = "throw_selected",
+				planted = "plant_selected",
+				recovered = "recovery_used",
+			})[reason]
 			if name then
 				log(core, userId, name, { round = m.law.round, t = m.law.now })
 			end
@@ -187,7 +192,12 @@ function MatchCore.step(core: Core, dt: number, positionOf: (number) -> Vec?): {
 			if cert and not core.certified[cert.scoredEventId] then
 				core.certified[cert.scoredEventId] = true -- exactly-once award ledger
 				core.awards[userId] = (core.awards[userId] or 0) + 1
-				log(core, userId, "goal_server_certified", { id = cert.scoredEventId, cause = cert.causeKind, elapsed = snap.elapsed })
+				log(
+					core,
+					userId,
+					"goal_server_certified",
+					{ id = cert.scoredEventId, cause = cert.causeKind, elapsed = snap.elapsed }
+				)
 			end
 		elseif m.heist then
 			local w = positionOf(userId)
