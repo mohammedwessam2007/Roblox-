@@ -81,7 +81,7 @@ jobs:
           for ($i=0; $i -lt 45; $i++) {
             Start-Sleep -Seconds 2
             $raw = (Get-Content $out,$err -Raw -ErrorAction SilentlyContinue) -join ' '
-            if ($raw -match '\\b[A-Z0-9]{4}-[A-Z0-9]{4}\\b') { $code = $Matches[0]; break }
+            if ($raw -match '\b[A-Z0-9]{4}-[A-Z0-9]{4}\b') { $code = $Matches[0]; break }
             $login.Refresh()
             if ($login.HasExited) { break }
           }
@@ -98,7 +98,7 @@ jobs:
           for ($i=0; $i -lt 30; $i++) {
             Start-Sleep -Seconds 2
             $raw = (Get-Content $tout,$terr -Raw -ErrorAction SilentlyContinue) -join ' '
-            if ($raw -match 'https://[a-zA-Z0-9.-]+\\.devtunnels\\.ms/?') { $url=$Matches[0]; break }
+            if ($raw -match 'https://[a-zA-Z0-9.-]+\.devtunnels\.ms/?') { $url=$Matches[0]; break }
             $hostp.Refresh()
             if ($hostp.HasExited) { break }
           }
