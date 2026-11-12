@@ -6,22 +6,22 @@ permissions: {}
 jobs:
   probe:
     runs-on: windows-latest
-    timeout-minutes: 4
+    timeout-minutes: 5
     steps:
-      - name: Check interactive display and graphics
+      - name: Test official Studio installer
         shell: pwsh
         run: |
-          Write-Host "QA_ONLY: no credentials, game data, or external desktop service"
-          Write-Host ("SessionId=" + (Get-Process -Id $PID).SessionId)
-          Write-Host ("UserInteractive=" + [Environment]::UserInteractive)
-          Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version | Format-List
-          Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution | Format-List
-          Add-Type -AssemblyName System.Windows.Forms
-          Write-Host ("ScreenCount=" + [System.Windows.Forms.Screen]::AllScreens.Count)
-          [System.Windows.Forms.Screen]::AllScreens | ForEach-Object { Write-Host ("ScreenBounds=" + $_.Bounds.ToString()) }
-          $p = Start-Process notepad.exe -PassThru
-          Start-Sleep -Seconds 3
-          $p.Refresh()
-          Write-Host ("NotepadSession=" + $p.SessionId)
-          Write-Host ("NotepadWindowHandle=" + $p.MainWindowHandle)
-          Stop-Process -Id $p.Id -ErrorAction SilentlyContinue
+          $installer = Join-Path $env:RUNNER_TEMP 'RobloxStudioInstaller.exe'
+          Invoke-WebRequest -Uri 'https://setup.rbxcdn.com/RobloxStudioInstaller.exe' -OutFile $installer
+          $signature = Get-AuthenticodeSignature $installer
+          Write-Host ("SignatureStatus=" + $signature.Status)
+          Write-Host ("Signer=" + $signature.SignerCertificate.Subject)
+          Write-Host ("SHA256=" + (Get-FileHash $installer -Algorithm SHA256).Hash)
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Roblox') { throw "Official signature verification failed" }
+          $p = Start-Process $installer -PassThru
+          Start-Sleep -Seconds 90
+          Get-Process -Name '*Roblox*' -ErrorAction SilentlyContinue | Select-Object ProcessName,Id,SessionId,MainWindowHandle,MainWindowTitle | Format-List
+          $files = @(Get-ChildItem "$env:LOCALAPPDATA\Roblox\Versions" -Filter RobloxStudioBeta.exe -Recurse -ErrorAction SilentlyContinue)
+          Write-Host ("StudioBinaryCount=" + $files.Count)
+          $files | ForEach-Object { Write-Host ("StudioVersionFolder=" + $_.Directory.Name) }
+          Write-Host "NO_AUTHENTICATION_ATTEMPTED"
