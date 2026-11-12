@@ -1,0 +1,27 @@
+name: Studio runner feasibility
+on:
+  push:
+    branches: [qa/studio-windows-runner-probe]
+permissions: {}
+jobs:
+  probe:
+    runs-on: windows-latest
+    timeout-minutes: 4
+    steps:
+      - name: Check interactive display and graphics
+        shell: pwsh
+        run: |
+          Write-Host "QA_ONLY: no credentials, game data, or external desktop service"
+          Write-Host ("SessionId=" + (Get-Process -Id $PID).SessionId)
+          Write-Host ("UserInteractive=" + [Environment]::UserInteractive)
+          Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version | Format-List
+          Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,CurrentHorizontalResolution,CurrentVerticalResolution | Format-List
+          Add-Type -AssemblyName System.Windows.Forms
+          Write-Host ("ScreenCount=" + [System.Windows.Forms.Screen]::AllScreens.Count)
+          [System.Windows.Forms.Screen]::AllScreens | ForEach-Object { Write-Host ("ScreenBounds=" + $_.Bounds.ToString()) }
+          $p = Start-Process notepad.exe -PassThru
+          Start-Sleep -Seconds 3
+          $p.Refresh()
+          Write-Host ("NotepadSession=" + $p.SessionId)
+          Write-Host ("NotepadWindowHandle=" + $p.MainWindowHandle)
+          Stop-Process -Id $p.Id -ErrorAction SilentlyContinue
