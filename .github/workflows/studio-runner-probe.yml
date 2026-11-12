@@ -32,4 +32,26 @@ jobs:
           $socket.Dispose()
           Write-Host ("LocalVNCBanner=" + [Text.Encoding]::ASCII.GetString($bytes,0,$count).Trim())
           if ($count -ne 12) { throw 'VNC handshake failed' }
+          python -m pip install --disable-pip-version-check --quiet websockify==0.13.0
+          if ($LASTEXITCODE -ne 0) { throw 'websockify install failed' }
+          $zip = Join-Path $env:RUNNER_TEMP 'novnc.zip'
+          Invoke-WebRequest -Uri 'https://github.com/novnc/noVNC/archive/a8dfd6a3ea3c74244f5ebdaa5a7f1023007a7820.zip' -OutFile $zip
+          Expand-Archive $zip -DestinationPath "$env:RUNNER_TEMP/novnc"
+          $web = (Get-ChildItem "$env:RUNNER_TEMP/novnc" -Directory | Select-Object -First 1).FullName
+          $p = Start-Process python -ArgumentList @('-m','websockify','--web', $web, '127.0.0.1:6080','127.0.0.1:5900') -PassThru
+          Start-Sleep -Seconds 5
+          $reply = Invoke-WebRequest -Uri 'http://127.0.0.1:6080/vnc.html' -UseBasicParsing
+          Write-Host ("NoVNCPageStatus=" + $reply.StatusCode)
+          $listener = Get-NetTCPConnection -State Listen -LocalPort 6080
+          Write-Host ("WebsockifyBind=" + $listener.LocalAddress)
+          if ($listener.LocalAddress -ne '127.0.0.1') { throw 'Unsafe websockify binding' }
+          $ws = [Net.WebSockets.ClientWebSocket]::new()
+          $ws.Options.AddSubProtocol('binary')
+          $ws.ConnectAsync([Uri]'ws://127.0.0.1:6080/',[Threading.CancellationToken]::None).GetAwaiter().GetResult()
+          $buf = New-Object byte[] 1024
+          $segment = [ArraySegment[byte]]::new($buf)
+          $recv = $ws.ReceiveAsync($segment,[Threading.CancellationToken]::None).GetAwaiter().GetResult()
+          Write-Host ("WebSocketRFB=" + [Text.Encoding]::ASCII.GetString($buf,0,$recv.Count).Trim())
+          $ws.Dispose()
+          Stop-Process -Id $p.Id -ErrorAction SilentlyContinue
           Write-Host 'NO TUNNEL; NO USER CREDENTIALS; LOOPBACK ONLY'
