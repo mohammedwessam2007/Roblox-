@@ -16,7 +16,7 @@ jobs:
           $sig = Get-AuthenticodeSignature $installer
           if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'Roblox') { throw "Signature failed" }
           Start-Process $installer
-          Start-Sleep -Seconds 70
+          Start-Sleep -Seconds 180
           Get-Process -Name '*Roblox*' -ErrorAction SilentlyContinue | Select-Object ProcessName,MainWindowHandle,MainWindowTitle | Format-List
           Add-Type -AssemblyName System.Windows.Forms
           Add-Type -AssemblyName System.Drawing
