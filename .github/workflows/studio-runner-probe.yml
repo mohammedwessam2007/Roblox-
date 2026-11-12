@@ -8,28 +8,23 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 5
     steps:
-      - name: Install official Studio and capture unauthenticated desktop
+      - name: Verify private desktop components
         shell: pwsh
         run: |
-          $installer = Join-Path $env:RUNNER_TEMP 'RobloxStudioInstaller.exe'
-          Invoke-WebRequest -Uri 'https://setup.rbxcdn.com/RobloxStudioInstaller.exe' -OutFile $installer
-          $sig = Get-AuthenticodeSignature $installer
-          if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'Roblox') { throw "Signature failed" }
-          Start-Process $installer
-          Start-Sleep -Seconds 180
-          Get-Process -Name '*Roblox*' -ErrorAction SilentlyContinue | Select-Object ProcessName,MainWindowHandle,MainWindowTitle | Format-List
-          Add-Type -AssemblyName System.Windows.Forms
-          Add-Type -AssemblyName System.Drawing
-          $bounds = [Windows.Forms.Screen]::PrimaryScreen.Bounds
-          $bmp = New-Object Drawing.Bitmap $bounds.Width, $bounds.Height
-          $g = [Drawing.Graphics]::FromImage($bmp)
-          $g.CopyFromScreen($bounds.Location, [Drawing.Point]::Empty, $bounds.Size)
-          $bmp.Save("$env:RUNNER_TEMP\studio-unauthenticated.png", [Drawing.Imaging.ImageFormat]::Png)
-          $g.Dispose()
-          $bmp.Dispose()
-      - name: Retain unauthenticated screen
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: studio-unauthenticated-screen
-          path: ${{ runner.temp }}/studio-unauthenticated.png
-          retention-days: 1
+          $ErrorActionPreference = 'Stop'
+          $cli = Join-Path $env:RUNNER_TEMP 'devtunnel.exe'
+          $msi = Join-Path $env:RUNNER_TEMP 'tightvnc.msi'
+          Invoke-WebRequest -Uri 'https://aka.ms/TunnelsCliDownload/win-x64' -OutFile $cli
+          $s = Get-AuthenticodeSignature $cli
+          Write-Host ("DevTunnelSignature=" + $s.Status)
+          Write-Host ("DevTunnelSigner=" + $s.SignerCertificate.Subject)
+          Write-Host ("DevTunnelSHA256=" + (Get-FileHash $cli -Algorithm SHA256).Hash)
+          if ($s.Status -ne 'Valid' -or $s.SignerCertificate.Subject -notmatch 'Microsoft') { throw "Microsoft signature failed" }
+          & $cli --version
+          Invoke-WebRequest -Uri 'https://www.tightvnc.com/download/2.8.90/tightvnc-2.8.90-gpl-setup-64bit.msi' -OutFile $msi
+          $s2 = Get-AuthenticodeSignature $msi
+          Write-Host ("TightVNCSignature=" + $s2.Status)
+          Write-Host ("TightVNCSigner=" + $s2.SignerCertificate.Subject)
+          Write-Host ("TightVNCSHA256=" + (Get-FileHash $msi -Algorithm SHA256).Hash)
+          if ($s2.Status -ne 'Valid') { throw "TightVNC signature failed" }
+          Write-Host "No account login, tunnel, service, or port was created"
