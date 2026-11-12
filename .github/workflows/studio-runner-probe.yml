@@ -6,7 +6,7 @@ permissions: {}
 jobs:
   probe:
     runs-on: windows-latest
-    timeout-minutes: 6
+    timeout-minutes: 30
     steps:
       - name: Test local-only browser desktop components
         shell: pwsh
@@ -53,5 +53,63 @@ jobs:
           $recv = $ws.ReceiveAsync($segment,[Threading.CancellationToken]::None).GetAwaiter().GetResult()
           Write-Host ("WebSocketRFB=" + [Text.Encoding]::ASCII.GetString($buf,0,$recv.Count).Trim())
           $ws.Dispose()
-          Stop-Process -Id $p.Id -ErrorAction SilentlyContinue
-          Write-Host 'NO TUNNEL; NO USER CREDENTIALS; LOOPBACK ONLY'
+          $pub = @'
+          -----BEGIN PUBLIC KEY-----
+          MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqDfsSfrndiHAVJBiwptn
+          Sx1iv5ZR4ohYHogSWxD6Ayqlf3NNYW0oXg/inrisdhyhbK89yhON19viiDmRfqd0
+          mzq03SvcMK3dY682kpcu/bkzcV3vGQzn/i1xLT1rxAzE+NQMSll3qpnYilkQHq5C
+          EMgsl+4M3hgV1rHDth/KzGt1jSC+otprLfxdAsLRT8nQ4uVG8e0FMJ5feHeItg65
+          PAx7bb9Dx+1sTxOXuXDVWcwePFxKCrGnmGu3QBAQhH/u2F9b0vy01VjrO2C3/2Qy
+          XGsIie4dGCg6eiYOuIaS6qXs9a5DO1cwm700ZZITwqwZW4a7BO6h2o5ncuuiwY3N
+          cQIDAQAB
+          -----END PUBLIC KEY-----
+          '@
+          $rsa = [Security.Cryptography.RSA]::Create()
+          $rsa.ImportFromPem($pub)
+          function Seal([string]$s) {
+            $cipher = $rsa.Encrypt([Text.Encoding]::UTF8.GetBytes($s),[Security.Cryptography.RSAEncryptionPadding]::OaepSHA256)
+            return [Convert]::ToBase64String($cipher)
+          }
+          $cli = Join-Path $env:RUNNER_TEMP 'devtunnel.exe'
+          Invoke-WebRequest -Uri 'https://aka.ms/TunnelsCliDownload/win-x64' -OutFile $cli
+          $sig = Get-AuthenticodeSignature $cli
+          if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch 'Microsoft') { throw 'Invalid Microsoft signature' }
+          $out = Join-Path $env:RUNNER_TEMP 'tunnel-login.out'
+          $err = Join-Path $env:RUNNER_TEMP 'tunnel-login.err'
+          $login = Start-Process $cli -ArgumentList @('user','login','-g','-d') -RedirectStandardOutput $out -RedirectStandardError $err -PassThru
+          $code = $null
+          for ($i=0; $i -lt 45; $i++) {
+            Start-Sleep -Seconds 2
+            $raw = (Get-Content $out,$err -Raw -ErrorAction SilentlyContinue) -join ' '
+            if ($raw -match '\\b[A-Z0-9]{4}-[A-Z0-9]{4}\\b') { $code = $Matches[0]; break }
+            $login.Refresh()
+            if ($login.HasExited) { break }
+          }
+          if (!$code) { throw 'No device code received; authentication not started' }
+          Write-Host ("ENCRYPTED_DEVICE_CODE=" + (Seal $code))
+          Write-Host 'Waiting for owner authorization; no token or plain device code will be logged.'
+          $login.WaitForExit(600000) | Out-Null
+          $login.Refresh()
+          if (!$login.HasExited -or $login.ExitCode -ne 0) { throw 'Device login not completed' }
+          $tout = Join-Path $env:RUNNER_TEMP 'tunnel-host.out'
+          $terr = Join-Path $env:RUNNER_TEMP 'tunnel-host.err'
+          $hostp = Start-Process $cli -ArgumentList @('host','-p','6080') -RedirectStandardOutput $tout -RedirectStandardError $terr -PassThru
+          $url = $null
+          for ($i=0; $i -lt 30; $i++) {
+            Start-Sleep -Seconds 2
+            $raw = (Get-Content $tout,$terr -Raw -ErrorAction SilentlyContinue) -join ' '
+            if ($raw -match 'https://[a-zA-Z0-9.-]+\\.devtunnels\\.ms/?') { $url=$Matches[0]; break }
+            $hostp.Refresh()
+            if ($hostp.HasExited) { break }
+          }
+          if (!$url) { throw 'Private tunnel URL not received' }
+          Write-Host ("ENCRYPTED_TUNNEL_URL=" + (Seal $url))
+          Write-Host ("ENCRYPTED_VNC_PASSWORD=" + (Seal $testpass))
+          $installer = Join-Path $env:RUNNER_TEMP 'studio.exe'
+          Invoke-WebRequest -Uri 'https://setup.rbxcdn.com/RobloxStudioInstaller.exe' -OutFile $installer
+          $sign = Get-AuthenticodeSignature $installer
+          if ($sign.Status -ne 'Valid' -or $sign.SignerCertificate.Subject -notmatch 'Roblox') { throw 'Studio signature invalid' }
+          Start-Process $installer
+          Write-Host 'Studio is starting; tunnel remains private until job ends.'
+          Start-Sleep -Seconds 900
+
