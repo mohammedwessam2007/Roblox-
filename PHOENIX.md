@@ -35,3 +35,10 @@ These need the owner's Roblox account or explicit consent. They are not done and
 
 ## Rollback
 Every step is a git commit; `git revert <sha>`. Nothing has been deployed, so nothing needs rolling back live.
+
+## 2026-11-13 UTC — offline reconnect regression fixed (NR-004)
+- **Verified original defect:** after scoring, leaving and rejoining a still-running server recycled `scoredEventId`, silently suppressing the next legitimate award. Mode switches also recycled match IDs.
+- **RED** `tests/rejoin.spec.luau`: 40 passed, **3 failed**, demonstrated at https://github.com/mohammedwessam2007/Roblox-/actions/runs/43517086416.
+- **GREEN** monotonic per-user match IDs in `src/shared/MatchCore.luau`: **43/43** Luau rule tests and **31/31** emulated server/client checks, strict Luau and Rojo PASS at https://github.com/mohammedwessam2007/Roblox-/actions/runs/43517439561.
+- **Actual Roblox engine** NOT_RUN; no Studio/device/player evidence. See `docs/negative-results/NR-004_reconnect_certificate_collision.md` for falsifier, repair, receipts and cross-server persistence limitations.
+- **Source authority:** this is a private, reversible source/test improvement. Fable remains the primary game engineer. No account, publication, product or secret action performed.
