@@ -40,7 +40,15 @@ export type Core = {
 }
 
 function MatchCore.new(sink: AnalyticsSink?): Core
-	return { matches = {}, freeSlots = {}, nextSlot = 0, sink = sink, certified = {}, awards = {}, nextMatchNoByUser = {} }
+	return {
+		matches = {},
+		freeSlots = {},
+		nextSlot = 0,
+		sink = sink,
+		certified = {},
+		awards = {},
+		nextMatchNoByUser = {},
+	}
 end
 
 local function log(core: Core, userId: number, name: string, fields: { [string]: any })
