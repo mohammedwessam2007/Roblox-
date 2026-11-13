@@ -36,10 +36,19 @@ export type Core = {
 	sink: AnalyticsSink?,
 	certified: { [string]: boolean }, -- scoredEventId ledger (idempotent awards)
 	awards: { [number]: number }, -- userId -> certified goal count
+	nextMatchNoByUser: { [number]: number }, -- monotonic per-player match IDs across disconnects
 }
 
 function MatchCore.new(sink: AnalyticsSink?): Core
-	return { matches = {}, freeSlots = {}, nextSlot = 0, sink = sink, certified = {}, awards = {} }
+	return {
+		matches = {},
+		freeSlots = {},
+		nextSlot = 0,
+		sink = sink,
+		certified = {},
+		awards = {},
+		nextMatchNoByUser = {},
+	}
 end
 
 local function log(core: Core, userId: number, name: string, fields: { [string]: any })
@@ -49,9 +58,12 @@ local function log(core: Core, userId: number, name: string, fields: { [string]:
 	end
 end
 
-local function newSim(m: Match)
+local function newSim(core: Core, m: Match)
 	local id = string.format("u%d-m%d", m.userId, m.nextMatchNo)
 	m.nextMatchNo += 1
+	-- Reserve the next per-player ID before creating another match, even if they leave.
+	-- A reconnect must never reuse a previously certified scoredEventId.
+	core.nextMatchNoByUser[m.userId] = m.nextMatchNo
 	if m.mode == Config.Modes.GridHeist then
 		m.heist = HeistSim.new(id)
 		m.law = nil
@@ -84,9 +96,9 @@ function MatchCore.join(core: Core, userId: number, now: number, mode: string?):
 		bucket = Protocol.newBucket(now),
 		rejects = {},
 		strikes = 0,
-		nextMatchNo = 1,
+		nextMatchNo = core.nextMatchNoByUser[userId] or 1,
 	}
-	newSim(m)
+	newSim(core, m)
 	core.matches[userId] = m
 	log(core, userId, "session_started", { mode = m.mode, slot = slot })
 	return m
@@ -174,7 +186,7 @@ function MatchCore._apply(core: Core, m: Match, intent: Protocol.Intent, world: 
 			return reject(core, m, "round_active")
 		end
 		m.mode = intent.mode :: string
-		newSim(m)
+		newSim(core, m)
 		log(core, userId, "mode_chosen", { mode = m.mode })
 		return true, "mode_set"
 	end
