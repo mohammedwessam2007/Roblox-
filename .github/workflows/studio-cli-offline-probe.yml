@@ -40,13 +40,27 @@ jobs:
           $studio = $null
           for ($i = 0; $i -lt 90; $i++) {
             Start-Sleep -Seconds 2
-            $studio = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Roblox/Versions') -Recurse -Filter 'RobloxStudioBeta.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($studio) { break }
+            # The installer may launch Studio outside LOCALAPPDATA on hosted runners.
+            # Prefer the executable path of the actual running process (avoid false install-block reports).
+            $running = Get-CimInstance Win32_Process -Filter "Name = 'RobloxStudioBeta.exe'" -ErrorAction SilentlyContinue |
+              Where-Object { $_.ExecutablePath -and (Test-Path $_.ExecutablePath) } | Select-Object -First 1
+            if ($running) {
+              $studio = Get-Item $running.ExecutablePath
+            } else {
+              $studio = Get-ChildItem (Join-Path $env:LOCALAPPDATA 'Roblox/Versions') -Recurse -Filter 'RobloxStudioBeta.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+              if (!$studio) {
+                $studio = Get-ChildItem 'C:/Program Files/Roblox','C:/Program Files (x86)/Roblox' -Recurse -Filter 'RobloxStudioBeta.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+              }
+            }
+            if ($studio) { Write-Host ('REAL_STUDIO_BINARY=' + $studio.FullName); break }
           }
           if (!$studio) {
             'STATE=BLOCKED_INSTALL_OR_NETWORK' | Set-Content $report
             throw 'Studio executable not installed within 180 sec'
           }
+          # The installer initially opens a GUI instance; use a clean CLI invocation.
+          Get-Process -Name 'RobloxStudioBeta' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 3
           $place = (Resolve-Path 'build/StealRealityTest.rbxl').Path
           $script = (Resolve-Path 'tools/studio/cli_offline_smoke.luau').Path
           $out = Join-Path (Get-Location).Path 'reports/STUDIO_CLI_OUTPUT.txt'
