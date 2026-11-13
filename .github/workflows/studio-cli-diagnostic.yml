@@ -1,0 +1,108 @@
+name: Studio CLI two-stage offline diagnostic (no key or Roblox publish)
+on:
+  push:
+    branches:
+      - qa/studio-cli-diagnostic-20261113
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-diagnostic:
+    runs-on: windows-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install signed Studio and discriminate boot/login from game errors
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force -Path 'reports','build','tools_bin' | Out-Null
+          $report = 'reports/STUDIO_CLI_TWO_STAGE_RESULT.txt'
+          @('STATE=NOT_RUN','AUTHENTICATION=NONE_SUPPLIED','UNIVERSE_OR_PLACE_ID=NONE_REQUIRED') | Set-Content $report
+          $installer = Join-Path $env:RUNNER_TEMP 'RobloxStudioInstaller.exe'
+          Invoke-WebRequest 'https://setup.rbxcdn.com/RobloxStudioInstaller.exe' -OutFile $installer
+          $signature = Get-AuthenticodeSignature $installer
+          if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Roblox') { throw 'Roblox installer signature failed' }
+          Start-Process -FilePath $installer | Out-Null
+          $studio = $null
+          for ($i = 0; $i -lt 65; $i++) {
+            Start-Sleep -Seconds 2
+            $running = Get-CimInstance Win32_Process -Filter "Name = 'RobloxStudioBeta.exe'" -ErrorAction SilentlyContinue |
+              Where-Object { $_.ExecutablePath -and (Test-Path $_.ExecutablePath) } | Select-Object -First 1
+            if ($running) { $studio = Get-Item $running.ExecutablePath }
+            if (!$studio) {
+              $studio = Get-ChildItem 'C:/Program Files/Roblox','C:/Program Files (x86)/Roblox' -Recurse -Filter RobloxStudioBeta.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+            }
+            if ($studio) { break }
+          }
+          if (!$studio) {
+            'STATE=BLOCKED_INSTALL_OR_NETWORK' | Add-Content $report
+            throw 'Signed Studio executable missing after bounded install'
+          }
+          Write-Host 'SIGNED_STUDIO_FOUND'
+          Get-Process -Name RobloxStudioBeta -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          Start-Sleep -Seconds 2
+          function Invoke-Smoke([string]$label, [string]$scriptRelative, [string]$placeRelative, [string]$marker) {
+            $scriptPath = (Resolve-Path $scriptRelative).Path
+            $outputPath = Join-Path (Get-Location).Path ('reports/STUDIO_CLI_' + $label + '.txt')
+            $arguments = @('--task', 'RunScript', '--runScriptFile', ('"' + $scriptPath + '"'), '--outputFile', ('"' + $outputPath + '"'), '--quitAfterExecution')
+            if ($placeRelative) {
+              $placePath = (Resolve-Path $placeRelative).Path
+              $arguments += @('--localPlaceFile', ('"' + $placePath + '"'))
+            }
+            if (Test-Path $outputPath) { Remove-Item $outputPath -Force }
+            $proc = Start-Process -FilePath $studio.FullName -ArgumentList $arguments -PassThru
+            $deadline = (Get-Date).AddSeconds(80)
+            $found = $false
+            while ((Get-Date) -lt $deadline) {
+              Start-Sleep -Seconds 2
+              if (Test-Path $outputPath) {
+                $txt = Get-Content $outputPath -Raw -ErrorAction SilentlyContinue
+                if ($txt -and $txt.Contains($marker)) { $found = $true; break }
+              }
+              $proc.Refresh()
+              if ($proc.HasExited) { break }
+            }
+            $proc.Refresh()
+            ($label + '_EXITED=' + $proc.HasExited) | Add-Content $report
+            if ($proc.HasExited) { ($label + '_EXIT_CODE=' + $proc.ExitCode) | Add-Content $report }
+            ($label + '_OUTPUT_EXISTS=' + (Test-Path $outputPath)) | Add-Content $report
+            ($label + '_PASSED=' + $found) | Add-Content $report
+            $remaining = @(Get-Process -Name RobloxStudioBeta -ErrorAction SilentlyContinue)
+            ($label + '_STUDIO_PROCESS_COUNT=' + $remaining.Count) | Add-Content $report
+            if (!$proc.HasExited) { Stop-Process -Id $proc.Id -Force -ErrorAction SilentlyContinue }
+            Get-Process -Name RobloxStudioBeta -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            Start-Sleep -Seconds 2
+            return $found
+          }
+          $basic = Invoke-Smoke 'BASEPLATE' 'tools/studio/cli_baseline_probe.luau' '' 'BASEPLATE_OFFLINE_ENGINE: 1 passed, 0 failed'
+          if (!$basic) {
+            'STATE=BLOCKED_BASEPLATE_CLI_BOOT_OR_AUTH_OR_GUI' | Add-Content $report
+            throw 'No account-free baseline engine result; game source was not involved'
+          }
+          'STATE=BASEPLATE_ENGINE_PASSED' | Add-Content $report
+          $zip = Join-Path $env:RUNNER_TEMP 'rojo.zip'
+          Invoke-WebRequest 'https://github.com/rojo-rbx/rojo/releases/download/v7.6.1/rojo-7.6.1-windows-x86_64.zip' -OutFile $zip
+          if ((Get-FileHash $zip -Algorithm SHA256).Hash -ne 'E1C9A78193C609720F3AFB38057D3909ED483ECBF5E9E3541313BA0DCBC4F1F8') { throw 'Rojo SHA mismatch' }
+          Expand-Archive $zip -DestinationPath 'tools_bin'
+          $rojo = Get-ChildItem 'tools_bin' -Recurse -Filter rojo.exe | Select-Object -First 1
+          if (!$rojo) { throw 'Rojo executable missing' }
+          & $rojo.FullName build test.project.json -o build/StealRealityTest.rbxl
+          if ($LASTEXITCODE -ne 0) { throw 'Rojo build failed' }
+          ('GAME_PLACE_SHA256=' + (Get-FileHash build/StealRealityTest.rbxl).Hash) | Add-Content $report
+          $gameOk = Invoke-Smoke 'GAME' 'tools/studio/cli_game_edit_smoke.luau' 'build/StealRealityTest.rbxl' 'LOCAL_GAME_EDIT_SMOKE: 3 passed, 0 failed'
+          if (!$gameOk) {
+            'STATE=BLOCKED_GAME_EDIT_MODE_OR_ENGINE_DEFECT' | Add-Content $report
+            throw 'Baseplate engine succeeded but game edit-mode test did not'
+          }
+          'STATE=PASS_REAL_STUDIO_EDIT_MODE_ONLY_NOT_PLAY' | Add-Content $report
+          Write-Host 'Real Studio edit-mode smoke passed; Play and device tests not claimed.'
+      - name: Preserve evidence even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-cli-two-stage-diagnostics
+          if-no-files-found: warn
+          path: |
+            reports/STUDIO_CLI_*.txt
+            build/StealRealityTest.rbxl
