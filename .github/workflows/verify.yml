@@ -9,29 +9,50 @@ jobs:
   gates:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    env:
-      ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
     steps:
       - uses: actions/checkout@v4
       - name: Install pinned Roblox toolchain
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p bin && cd bin
-          curl -sSL -o rojo.zip https://github.com/rojo-rbx/rojo/releases/download/v7.6.1/rojo-7.6.1-linux-x86_64.zip
-          curl -sSL -o lune.zip https://github.com/lune-org/lune/releases/download/v0.10.4/lune-0.10.4-linux-x86_64.zip
-          curl -sSL -o stylua.zip https://github.com/JohnnyMorganz/StyLua/releases/download/v2.6.0/stylua-linux-x86_64.zip
-          curl -sSL -o lsp.zip https://github.com/JohnnyMorganz/luau-lsp/releases/download/1.70.1/luau-lsp-linux-x86_64.zip
+          curl --fail --location --silent --show-error --retry 3 -o rojo.zip https://github.com/rojo-rbx/rojo/releases/download/v7.6.1/rojo-7.6.1-linux-x86_64.zip
+          curl --fail --location --silent --show-error --retry 3 -o lune.zip https://github.com/lune-org/lune/releases/download/v0.10.4/lune-0.10.4-linux-x86_64.zip
+          curl --fail --location --silent --show-error --retry 3 -o stylua.zip https://github.com/JohnnyMorganz/StyLua/releases/download/v2.6.0/stylua-linux-x86_64.zip
+          curl --fail --location --silent --show-error --retry 3 -o lsp.zip https://github.com/JohnnyMorganz/luau-lsp/releases/download/1.70.1/luau-lsp-linux-x86_64.zip
           for z in *.zip; do unzip -q -o "$z"; done
           chmod +x rojo lune stylua luau-lsp
+      - name: Verify secret-free Roblox preflight checker
+        run: python3 -m unittest discover -s tests/python -p 'test_opencloud_preflight.py' -v
       - name: Run all gates (format, build, strict analyze, place check, tests, emulated runtime, sweep)
-        run: TOOLS="$PWD/bin" tools/verify.sh | tee reports/VERIFY_RUN_CI.txt
-      - name: Real-engine tests via Open Cloud (runs only when secrets are configured)
-        if: ${{ env.ROBLOX_API_KEY != '' }}
+        shell: bash
+        run: |
+          set -o pipefail
+          TOOLS="$PWD/bin" tools/verify.sh | tee reports/VERIFY_RUN_CI.txt
+      - name: Explain private Roblox engine-test readiness (no secrets exposed)
+        id: opencloud_preflight
         env:
+          OPEN_CLOUD_ALLOWED_EVENT: ${{ github.event_name == 'push' && github.ref == 'refs/heads/claude/optimistic-shannon-bkv3f3' }}
+          ROBLOX_KEY_PRESENT: ${{ secrets.ROBLOX_API_KEY != '' }}
+          ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ vars.ROBLOX_PLACE_ID }}
+        run: python3 tools/automation/opencloud_preflight.py
+      - name: Run real-engine tests on SAVED private place only
+        if: ${{ steps.opencloud_preflight.outputs.ready == 'true' }}
+        env:
+          ROBLOX_API_KEY: ${{ secrets.ROBLOX_API_KEY }}
+          ROBLOX_UNIVERSE_ID: ${{ vars.ROBLOX_UNIVERSE_ID }}
+          ROBLOX_PLACE_ID: ${{ vars.ROBLOX_PLACE_ID }}
           ROJO: ${{ github.workspace }}/bin/rojo
-        run: python3 tools/opencloud/pipeline.py engine-test --universe "${{ vars.ROBLOX_UNIVERSE_ID }}" --place "${{ vars.ROBLOX_PLACE_ID }}"
-      - uses: actions/upload-artifact@v4
+        run: |
+          python3 tools/opencloud/pipeline.py engine-test --universe "$ROBLOX_UNIVERSE_ID" --place "$ROBLOX_PLACE_ID"
+      - name: Upload built places and full receipts even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: place-and-reports
+          if-no-files-found: warn
           path: |
             build/StealReality.rbxl
+            build/StealRealityTest.rbxl
             reports/
