@@ -4,8 +4,8 @@ set -euo pipefail
 cd "$(dirname "$0")/../.."
 BIN="$HOME/.stealreality-tools"; mkdir -p "$BIN"
 if [ ! -x "$BIN/rojo" ]; then
-  curl -sSL -o "$BIN/rojo.zip" https://github.com/rojo-rbx/rojo/releases/download/v7.6.1/rojo-7.6.1-macos-aarch64.zip || \
-  curl -sSL -o "$BIN/rojo.zip" https://github.com/rojo-rbx/rojo/releases/download/v7.6.1/rojo-7.6.1-macos-x86_64.zip
+  curl -fsSL -o "$BIN/rojo.zip" https://github.com/rojo-rbx/rojo/releases/download/v7.6.1/rojo-7.6.1-macos-aarch64.zip || \
+  curl -fsSL -o "$BIN/rojo.zip" https://github.com/rojo-rbx/rojo/releases/download/v7.6.1/rojo-7.6.1-macos-x86_64.zip
   unzip -q -o "$BIN/rojo.zip" -d "$BIN" && chmod +x "$BIN/rojo"
 fi
 git pull --ff-only || true
