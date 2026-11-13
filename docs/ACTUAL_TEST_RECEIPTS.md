@@ -1,4 +1,6 @@
-# ACTUAL TEST RECEIPTS — 2026-11-12 (cloud Linux sandbox)
+# ACTUAL TEST RECEIPTS — 2026-11-12, re-run 2026-11-13 (cloud Linux sandbox)
+
+2026-11-13 re-run of `tools/verify.sh`: identical results (40/40, 31/31, ANALYZE_OK, PLACE_STRUCTURE_OK) plus the new `WRAPPER_SYNC_OK` check.
 
 Full raw log: `reports/VERIFY_RUN.txt`, produced by `TOOLS=<bins> tools/verify.sh`.
 
@@ -12,8 +14,8 @@ Full raw log: `reports/VERIFY_RUN.txt`, produced by `TOOLS=<bins> tools/verify.s
 | LUAU_TESTED (G1 headless) | PASS 40/40 | `lune 0.10.4 run tests/run.luau`. The tests execute the same ModuleScripts the server runs |
 | Balance sweep | RUN | `reports/BALANCE_SWEEP.csv`. 2,356 simulated single throws. After the bot-counter fix (NR-003), a precise (<5°) full-power shot from spawn scores 46% on its own; otherwise the player must stun the bot or use a well; shots >10° off score ~0% unless they bank off geometry. Simulation only, **not player data** |
 | G2-EMULATED runtime | PASS 31/31, 0 script errors | `tests/engine/emulated_runtime.luau` runs the **built** Server Script + Client LocalScript against Lune's reflection-validated Roblox instance model with emulated services: join, HUD build, client smoothing proxies, prompt STEAL, client F-key aim THROW, bot counter, bot stun, server-certified goal, AGAIN, forged remotes, 2nd player isolation/cleanup, OTHER GAME, Heist blackout/lamps/color grade, REROUTE, teleport rejection, analytics names. Found 4 real defects (NR-003). **Not Studio**: no physics, rendering, replication or real networking |
-| STUDIO_SINGLE_CLIENT (G2) | **NOT_RUN** | no Studio in this environment |
-| STUDIO_2_CLIENT / 150 ms RTT (G3) | **NOT_RUN** | — |
+| STUDIO_SINGLE_CLIENT (G2) | **NOT_RUN** | 2026-11-13: the session meant for the owner's computer ran in a cloud Linux container with no Studio and no shared computer folder (`reports/STUDIO_RUN.md`). One-command runner ready: `tools/desktop/run_studio_tests.{ps1,command}` → `reports/STUDIO_TEST_OUTPUT.txt` |
+| STUDIO_2_CLIENT / 150 ms RTT (G3) | **NOT_RUN** | needs a person in Studio (Test → Server & 2 Clients, Network Simulator 150 ms) |
 | REAL_ANDROID (G4) | **NOT_RUN** | — |
 | REAL_FIRST_TIME_PLAYERS (G5) | **NOT_RUN** | requires owner approval; packet ready in `docs/playtest/` |
 | Release / store / revenue | **NOT_STARTED** | no publish, no product ids, no purchases |

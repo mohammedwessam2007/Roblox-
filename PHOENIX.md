@@ -1,4 +1,4 @@
-# PHOENIX CHECKPOINT — 2026-11-12
+# PHOENIX CHECKPOINT — 2026-11-13
 
 **Objective:** a playable, server-authoritative Roblox build of STEAL REALITY! (Law Sport) and its challenger GRID HEIST, with real verification.
 **Authority used:** local/private reversible work at $0. No publish, purchases, outreach, uploads or API keys.
@@ -17,6 +17,9 @@ Studio single- and two-client runs, the network simulator, a real Android device
 - **Grid Heist:** CUT POWER (blackout, drone vision 34→13) → REROUTE SECURITY *or* OPEN ESCAPE (alarm trade-off) → GRAB CORE → escape. Drone detection uses line of sight; anti-teleport is enforced. Same HUD, AGAIN and polish level.
 - **Platform:** zero-CCU solo works with no DataStore, no ghosts and no other players. Adaptive Reality offers 5 tiers plus Auto. Reduced motion and sound toggles. Touch, mouse/keyboard and gamepad paths.
 - **Docs:** art bible, sound catalog, 12 original synthesized WAVs with SHA-256 provenance, playtest packet (AB/BA), economics scenarios (illustrative), store matrix (disabled placeholders), publishing, rollback, marketing shot list, risk board, analytics dictionary.
+
+## 2026-11-13 update
+A real Studio run was requested, but the session ran in cloud Linux, so it is NOT_RUN (`reports/STUDIO_RUN.md`). Added the one-command Studio test runner `tools/desktop/run_studio_tests.{ps1,command}` and the print-only wrapper `tools/studio/studio_engine_tests.luau`, whose sync with `engine_task.luau` is now gated in `verify.sh`. Gates re-run here: all green.
 
 ## Next task
 The owner asked to stay out of the loop, so nothing is pending on them for the work Claude can do. Claude-side backlog, in order:
